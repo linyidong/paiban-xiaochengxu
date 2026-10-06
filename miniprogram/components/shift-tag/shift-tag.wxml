@@ -1,0 +1,1 @@
+<view class="tag" style="background: {{color}}" wx:if="{{type}}">{{label}}</view>

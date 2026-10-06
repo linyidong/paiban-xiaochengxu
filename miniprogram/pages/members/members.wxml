@@ -1,0 +1,24 @@
+<view class="members-page">
+  <view class="card">
+    <view class="members-title">添加成员</view>
+    <view class="form-row">
+      <input class="form-input" placeholder="姓名（必填）" value="{{inputName}}" bindinput="onName" />
+    </view>
+    <view class="form-row">
+      <input class="form-input" placeholder="微信号（选填，便于绑定）" value="{{inputWx}}" bindinput="onWx" />
+    </view>
+    <button class="btn-primary" bindtap="onAdd">添加成员</button>
+  </view>
+
+  <view class="card">
+    <view class="members-title">成员列表（{{members.length}}）</view>
+    <view class="member-row" wx:for="{{members}}" wx:key="_id">
+      <view class="member-info">
+        <view class="member-name">{{item.displayName}}</view>
+        <view class="member-wx">{{item.wxId || '未填微信号'}} · {{item.role === 'admin' ? '管理员' : '成员'}}</view>
+      </view>
+      <view class="member-remove" wx:if="{{item.role !== 'admin'}}"
+            data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onRemove">移除</view>
+    </view>
+  </view>
+</view>

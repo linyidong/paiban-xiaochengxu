@@ -1,0 +1,30 @@
+{
+  "pages": [
+    "pages/calendar/calendar",
+    "pages/login/login",
+    "pages/import/import",
+    "pages/edit/edit",
+    "pages/members/members",
+    "pages/mine/mine"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#F7F8FA",
+    "navigationBarTitleText": "日历排班",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F7F8FA"
+  },
+  "tabBar": {
+    "color": "#9CA3AF",
+    "selectedColor": "#3B82F6",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/calendar/calendar", "text": "日历" },
+      { "pagePath": "pages/import/import", "text": "导入" },
+      { "pagePath": "pages/mine/mine", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

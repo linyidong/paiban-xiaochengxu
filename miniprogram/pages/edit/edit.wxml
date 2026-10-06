@@ -1,0 +1,29 @@
+<view class="edit-page">
+  <view class="card">
+    <view class="edit-title">修改排班</view>
+    <view class="edit-row">
+      <text class="edit-label">日期</text>
+      <text class="edit-value">{{date}}</text>
+    </view>
+    <view class="edit-row" wx:if="{{canEditOther}}">
+      <text class="edit-label">成员</text>
+      <view class="options">
+        <view class="option {{name === item.name ? 'active' : ''}}"
+              wx:for="{{members}}" wx:key="name"
+              data-name="{{item.name}}" bindtap="onSelectMember">{{item.name}}</view>
+      </view>
+    </view>
+    <view class="edit-row">
+      <text class="edit-label">班次</text>
+      <view class="options">
+        <view class="option shift-option {{shift === item.type ? 'active' : ''}}"
+              wx:for="{{shiftOptions}}" wx:key="type"
+              data-type="{{item.type}}" bindtap="onSelectShift">
+          <view class="shift-dot" style="background: {{item.color}}"></view>
+          {{item.type}}
+        </view>
+      </view>
+    </view>
+    <button class="btn-primary edit-save" bindtap="onSave">保存</button>
+  </view>
+</view>

@@ -1,0 +1,89 @@
+<view class="calendar-page">
+  <view class="month-bar card">
+    <view class="month-nav" bindtap="onPrevMonth">‹</view>
+    <view class="month-title" bindtap="onPickDate">{{year}}年{{month}}月</view>
+    <view class="month-nav" bindtap="onNextMonth">›</view>
+  </view>
+
+  <scroll-view scroll-x class="member-scroll" wx:if="{{members.length}}">
+    <view class="member-item {{selectedMember === item.name ? 'active' : ''}}"
+          wx:for="{{members}}" wx:key="name"
+          data-name="{{item.name}}" bindtap="onSelectMember">{{item.displayName}}</view>
+  </scroll-view>
+
+  <view class="cal-card card">
+    <calendar cells="{{cells}}" bind:selectday="onTapDay" bind:longpressday="onLongPressDay" />
+    <view class="multi-btn {{multiSelect ? 'on' : ''}}" bindtap="onToggleMulti">{{multiSelect ? '完成' : '批量'}}</view>
+    <!-- 无排班提示 -->
+    <view class="empty-tip" wx:if="{{!hasData}}">
+      <view class="empty-icon"></view>
+      <view class="empty-text">{{year}}年{{month}}月暂无排班</view>
+    </view>
+  </view>
+
+  <!-- 多选模式操作条 -->
+  <view class="multi-bar" wx:if="{{multiSelect}}">
+    <view class="multi-info">已选 {{selectedDates.length}} 天</view>
+    <view class="multi-go" bindtap="onBatchSet">统一设置班次 ›</view>
+  </view>
+
+  <view class="legend card">
+    <view class="legend-row">
+      <view class="legend-item" wx:for="{{legendItems}}" wx:key="type">
+        <view class="dot" style="background:{{item.color}}"></view><text>{{item.type}}</text>
+      </view>
+    </view>
+    <view class="legend-actions">
+      <view class="legend-act-btn legend-act-refresh" bindtap="refreshAuth">🔄 重新检测权限</view>
+      <view class="legend-act-btn legend-act-delete" wx:if="{{isAdmin}}" bindtap="onDeleteMember">删除成员</view>
+    </view>
+  </view>
+
+  <!-- 班次选择弹窗 -->
+  <view class="mask" wx:if="{{showPicker}}" bindtap="closePicker"></view>
+  <view class="picker-panel" wx:if="{{showPicker}}">
+    <view class="picker-title">{{pickerTitle}}</view>
+    <view class="picker-grid">
+      <view class="picker-item" wx:for="{{shiftOptions}}" wx:key="type"
+            data-type="{{item.type}}" bindtap="onPickShift">
+        <view class="picker-dot" style="background:{{item.color}}"></view>{{item.type}}
+      </view>
+    </view>
+    <view class="picker-cancel" bindtap="closePicker">取消</view>
+  </view>
+
+  <!-- 年月选择器：下滑面板 -->
+  <view class="date-picker-overlay" wx:if="{{showDatePicker}}">
+    <view class="date-picker-panel">
+      <!-- 年份选择模式 -->
+      <view wx:if="{{datePickMode === 'year'}}">
+        <view class="date-picker-header">
+          <view class="date-picker-title">请选择年份</view>
+          <view class="date-picker-close" bindtap="closeDatePicker">✕</view>
+        </view>
+        <view class="year-grid">
+          <view class="year-cell {{item === year ? 'current' : ''}}"
+                wx:for="{{yearList}}" wx:key="*this"
+                data-year="{{item}}" bindtap="onPickYear">
+            {{item}}年
+          </view>
+        </view>
+      </view>
+      <!-- 月份选择模式 -->
+      <view wx:else>
+        <view class="date-picker-header">
+          <view class="date-picker-year-nav" bindtap="onBackToYear">‹</view>
+          <view class="date-picker-year-title" bindtap="onBackToYear">{{tempYear}}年</view>
+          <view class="date-picker-close" bindtap="closeDatePicker">✕</view>
+        </view>
+        <view class="month-grid">
+          <view class="month-cell {{item === month && tempYear === year ? 'current' : ''}} {{memberMonths[selectedMember] && memberMonths[selectedMember].indexOf(item) > -1 ? 'has-data' : ''}}"
+                wx:for="{{[1,2,3,4,5,6,7,8,9,10,11,12]}}" wx:key="*this"
+                data-month="{{item}}" bindtap="onPickMonth">
+            {{item}}月
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

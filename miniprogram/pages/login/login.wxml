@@ -1,0 +1,23 @@
+<view class="login-page">
+  <!-- 登录按钮 -->
+  <view class="login-card card" wx:if="{{!needBind}}">
+    <view class="login-title">日历排班</view>
+    <view class="login-desc">导入排班截图 / 表格，一眼看清休 / 白 / 晚</view>
+    <button class="btn-primary login-btn" bindtap="onLogin" loading="{{loading}}">微信一键登录</button>
+  </view>
+
+  <!-- 绑定昵称 -->
+  <view class="bind-card card" wx:if="{{needBind}}">
+    <view class="bind-title">请选择您的昵称</view>
+    <view class="bind-desc">管理员已添加成员列表，请选择您的名字完成绑定</view>
+    <view class="bind-list">
+      <view class="bind-item {{selectedName === item.name ? 'active' : ''}}"
+            wx:for="{{memberList}}" wx:key="name"
+            data-name="{{item.name}}" bindtap="onSelectName">
+        {{item.name}}
+      </view>
+    </view>
+    <view class="bind-empty" wx:if="{{!memberList.length}}">暂无成员，请联系管理员添加</view>
+    <button class="btn-primary bind-btn" bindtap="onConfirmBind" loading="{{loading}}" disabled="{{!selectedName}}">确认绑定</button>
+  </view>
+</view>

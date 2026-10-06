@@ -1,0 +1,30 @@
+.import-page { padding-bottom: 40rpx; }
+.import-title { font-size: 36rpx; font-weight: 600; margin-bottom: 8rpx; }
+.import-desc { color: #6B7280; font-size: 26rpx; margin-bottom: 32rpx; }
+.import-btn { margin-bottom: 20rpx; }
+.preview-title { font-size: 32rpx; font-weight: 600; margin-bottom: 8rpx; }
+.preview-tip { color: #F59E0B; font-size: 24rpx; margin-bottom: 24rpx; }
+.member-preview { margin-bottom: 28rpx; }
+.member-name { font-size: 30rpx; font-weight: 500; margin-bottom: 12rpx; }
+.shift-tags { display: flex; flex-wrap: wrap; }
+.shift-tag {
+  background: #F3F4F6; border-radius: 12rpx; padding: 8rpx 16rpx;
+  font-size: 24rpx; color: #1F2937; margin: 0 12rpx 12rpx 0;
+}
+.preview-actions { margin-top: 16rpx; }
+.preview-actions button { margin-bottom: 16rpx; }
+.mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 100; }
+.member-select-panel {
+  position: fixed; left: 24rpx; right: 24rpx; bottom: 60rpx; z-index: 101;
+  background: #FFFFFF; border-radius: 24rpx; padding: 32rpx 24rpx 24rpx;
+  box-shadow: 0 8rpx 40rpx rgba(0,0,0,0.15);
+}
+.member-select-title { text-align: center; font-size: 30rpx; font-weight: 600; margin-bottom: 24rpx; color: #1F2937; }
+.member-select-list { display: flex; flex-wrap: wrap; }
+.member-select-item {
+  width: 50%; text-align: center; padding: 20rpx 0; font-size: 28rpx; color: #1F2937;
+  background: #F3F4F6; border-radius: 12rpx; margin: 0 8rpx 16rpx;
+}
+.member-select-cancel {
+  text-align: center; color: #9CA3AF; font-size: 28rpx; padding: 16rpx 0; margin-top: 8rpx;
+}

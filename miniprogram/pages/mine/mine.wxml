@@ -1,0 +1,32 @@
+<view class="mine-page">
+  <view class="card">
+    <view class="mine-name">{{name}}</view>
+    <view class="mine-role">{{role}}</view>
+  </view>
+
+  <view class="card" wx:if="{{summary}}">
+    <view class="mine-title">本月我的排班</view>
+    <view class="stat-row">
+      <view class="stat-item">
+        <view class="stat-num" style="color:#EF4444">{{summary['休']}}</view>
+        <view class="stat-label">休</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num" style="color:#3B82F6">{{summary['白']}}</view>
+        <view class="stat-label">白班</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-num" style="color:#111827">{{summary['晚']}}</view>
+        <view class="stat-label">晚班</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{isAdmin}}">
+    <view class="mine-link" bindtap="goMembers">成员管理 →</view>
+  </view>
+
+  <view class="card">
+    <view class="mine-link logout" bindtap="onLogout">退出登录</view>
+  </view>
+</view>

@@ -1,0 +1,11 @@
+.members-page { padding-bottom: 40rpx; }
+.members-title { font-size: 32rpx; font-weight: 600; margin-bottom: 24rpx; }
+.form-row { margin-bottom: 20rpx; }
+.form-input {
+  background: #F9FAFB; border-radius: 16rpx; padding: 20rpx 24rpx; font-size: 28rpx;
+}
+.member-row { display: flex; align-items: center; justify-content: space-between; padding: 20rpx 0; border-bottom: 2rpx solid #F3F4F6; }
+.member-row:last-child { border-bottom: none; }
+.member-name { font-size: 30rpx; font-weight: 500; }
+.member-wx { font-size: 24rpx; color: #9CA3AF; margin-top: 4rpx; }
+.member-remove { color: #EF4444; font-size: 26rpx; padding: 8rpx 16rpx; }

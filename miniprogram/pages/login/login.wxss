@@ -1,0 +1,73 @@
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48rpx;
+  box-sizing: border-box;
+}
+.login-card {
+  width: 100%;
+  text-align: center;
+  padding: 72rpx 40rpx;
+}
+.login-title {
+  font-size: 52rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+.login-desc {
+  color: #6B7280;
+  font-size: 26rpx;
+  margin-bottom: 72rpx;
+}
+.login-btn { margin-top: 24rpx; }
+
+/* 绑定昵称 */
+.bind-card {
+  width: 100%;
+  padding: 48rpx 32rpx;
+}
+.bind-title {
+  font-size: 36rpx;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 12rpx;
+}
+.bind-desc {
+  color: #6B7280;
+  font-size: 24rpx;
+  text-align: center;
+  margin-bottom: 36rpx;
+}
+.bind-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 36rpx;
+}
+.bind-item {
+  padding: 16rpx 32rpx;
+  background: #F3F4F6;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  color: #374151;
+  border: 2rpx solid transparent;
+}
+.bind-item.active {
+  background: #EFF6FF;
+  color: #3B82F6;
+  border-color: #3B82F6;
+  font-weight: 600;
+}
+.bind-empty {
+  text-align: center;
+  color: #9CA3AF;
+  font-size: 26rpx;
+  padding: 40rpx 0;
+}
+.bind-btn { margin-top: 16rpx; }
+.bind-btn[disabled] {
+  background: #D1D5DB;
+  color: #9CA3AF;
+}

@@ -1,0 +1,39 @@
+/* A4 锁词：简洁现代 / 移动端优先 / 中文界面 / 浅色主题 / 圆角卡片 */
+page {
+  background: #F7F8FA;
+  color: #1F2937;
+  font-size: 28rpx;
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  box-sizing: border-box;
+}
+.card {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  margin: 20rpx 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+.btn-primary {
+  background: #3B82F6;
+  color: #FFFFFF;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  padding: 20rpx 0;
+  text-align: center;
+  line-height: 1.4;
+}
+.btn-primary::after { border: none; }
+.btn-primary:active { opacity: 0.85; }
+.btn-ghost {
+  background: #FFFFFF;
+  color: #3B82F6;
+  border: 2rpx solid #3B82F6;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  padding: 18rpx 0;
+  text-align: center;
+  line-height: 1.4;
+}
+.btn-ghost::after { border: none; }
+.btn-ghost:active { opacity: 0.85; }
