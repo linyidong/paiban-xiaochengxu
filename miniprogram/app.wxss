@@ -1,39 +1,65 @@
-/* A4 锁词：简洁现代 / 移动端优先 / 中文界面 / 浅色主题 / 圆角卡片 */
+/* 设计令牌（T-001）：所有页面共用。
+   迁移说明：页面级硬编码样式在 T-013～T-015 分批替换；本文件只负责全局基座。 */
 page {
-  background: #F7F8FA;
-  color: #1F2937;
-  font-size: 28rpx;
+  --color-bg: #F4F6F5;
+  --color-surface: #FFFFFF;
+  --color-text: #14231F;
+  --color-text-secondary: #4B5A55;
+  --color-text-muted: #5F6E69;
+  --color-primary: #0F766E;
+  --color-primary-strong: #115E59;
+  --color-danger: #B91C1C;
+  --color-border: #E2E8E5;
+
+  --font-size-title: 40rpx;
+  --font-size-body: 32rpx;
+  --font-size-caption: 28rpx;
+
+  --radius-card: 20rpx;
+  --radius-btn: 12rpx;
+
+  --space-page: 32rpx;
+  --space-card: 32rpx;
+
+  --shadow-card: 0 2rpx 8rpx rgba(20, 35, 31, 0.06);
+
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-size-body);
   line-height: 1.6;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
   box-sizing: border-box;
 }
+
 .card {
-  background: #FFFFFF;
-  border-radius: 24rpx;
-  padding: 24rpx;
-  margin: 20rpx 24rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: var(--space-card);
+  margin: 20rpx var(--space-page);
+  box-shadow: var(--shadow-card);
 }
+
 .btn-primary {
-  background: #3B82F6;
+  background: var(--color-primary);
   color: #FFFFFF;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  padding: 20rpx 0;
+  border-radius: var(--radius-btn);
+  font-size: var(--font-size-body);
+  padding: 24rpx 0;
   text-align: center;
   line-height: 1.4;
 }
 .btn-primary::after { border: none; }
-.btn-primary:active { opacity: 0.85; }
+.btn-primary:active { background: var(--color-primary-strong); }
+
 .btn-ghost {
-  background: #FFFFFF;
-  color: #3B82F6;
-  border: 2rpx solid #3B82F6;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  padding: 18rpx 0;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 2rpx solid var(--color-primary);
+  border-radius: var(--radius-btn);
+  font-size: var(--font-size-body);
+  padding: 22rpx 0;
   text-align: center;
   line-height: 1.4;
 }
 .btn-ghost::after { border: none; }
-.btn-ghost:active { opacity: 0.85; }
+.btn-ghost:active { background: #ECFDF5; }
