@@ -1,14 +1,36 @@
 // 云函数 importShift：排班导入（先弹窗输入姓名 → 按成员识别导入）
 // 第一步：识别（sourceType=image → AI 视觉识别；excel → SheetJS 解析）返回 preview
-// 第二步：commit=true → 覆盖式写入 shifts
-// 识别格式假设：表头=日期（横排）、左列=姓名、交叉单元格=班次（休/白/晚）
+// 第二步：commit=true → 按“成员 + 月份”全量替换（新增/更新/清空）
+// 权限：成员只能导入自己；管理员可导入任意成员（整表在 T-009 开放）
 const https = require('https');
 const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
+const _ = db.command;
 
 // ⚠️ 人工参数来源：本目录 config.json（由根目录《人工必填参数清单.json》同步），勿手改
 const { AI_VISION_API_KEY, AI_VISION_ENDPOINT, AI_VISION_MODEL, MEMBER_ALIAS } = require('./config.json');
+
+const DAYS_IN_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function isLeapYear(y) {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+}
+
+function daysInMonth(y, m) {
+  if (m < 1 || m > 12) return 0;
+  return m === 2 && isLeapYear(y) ? 29 : DAYS_IN_MONTH[m];
+}
+
+// 校验 YYYY-MM-DD 是否存在（含闰年）
+function isValidDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const y = Number(s.slice(0, 4));
+  const m = Number(s.slice(5, 7));
+  const d = Number(s.slice(8, 10));
+  const max = daysInMonth(y, m);
+  return max > 0 && d >= 1 && d <= max;
+}
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext();
@@ -23,7 +45,7 @@ exports.main = async (event) => {
       preview = await parseExcel(fileID);
     } else {
       try {
-        preview = await recognizeImage(fileID, targetName);
+        preview = await recognizeImage(fileID, targetName, event.year, event.month);
       } catch (e) {
         return { ok: false, msg: '识别失败：' + e.message };
       }
@@ -67,8 +89,10 @@ exports.main = async (event) => {
     return { ok: true, preview: preview };
   }
 
-  // ---------- 第二步：确认入库（覆盖式） ----------
-  const { preview, year, month } = event;
+  // ---------- 第二步：确认入库（按成员 + 月份全量替换） ----------
+  const { preview } = event;
+  const eventYear = parseInt(event.year, 10) || 0;
+  const eventMonth = parseInt(event.month, 10) || 0;
   if (!preview || !preview.length) return { ok: false, msg: '预览为空' };
   const usersRes = await db.collection('users').limit(100).get();
   // 软删除成员不参与匹配/自动登记；同名已删除成员必须由管理员先恢复
@@ -81,51 +105,137 @@ exports.main = async (event) => {
       return { ok: false, msg: '成员「' + (p.name || raw) + '」已删除，请先恢复' };
     }
   }
+
+  // 调用者身份：成员只能导入自己，管理员可导入任意成员
+  const meRes = await db.collection('users').where({ openid: OPENID }).get();
+  const me = meRes.data.filter(function (u) { return !u.isDeleted; })[0];
+  if (!me) return { ok: false, msg: '用户不存在，请先登录' };
+  const isAdmin = me.role === 'admin';
+
   const nameToId = {};
   activeUsers.forEach(function (u) { if (u.name) nameToId[u.name] = u._id; });
-  let count = 0;
-  let newAdded = [];
   const usersNames = activeUsers.map(function (u) { return u.name; });
   const formalSet2 = Object.keys(MEMBER_ALIAS || {});
+
+  // 先整体校验（姓名/权限/月份/日期），全部通过后再写库，避免部分写入
+  const plans = [];
   for (const p of preview) {
-    let finalName = p.name;
-    let userId = nameToId[finalName];
-    // 关键：finalName 已经是正式名时，不做近似归位（防止被脏别名"成员A"抢回去）
-    const isFormal2 = formalSet2.indexOf(finalName) > -1;
-    if (!userId && usersNames.length && !isFormal2) {
-      // 近似归位：与已有成员形近（编辑距离≤2/包含）→ 用已有成员，避免重复登记错名
-      const matched = normalizeName(finalName, usersNames);
-      if (matched !== finalName && nameToId[matched]) { finalName = matched; userId = nameToId[matched]; }
+    if (!p.rows || !p.rows.length) continue;
+    const rawName = translateAlias(p.name || '');
+    let finalName;
+    let userId;
+    if (!isAdmin) {
+      // 成员导入：先按原文（别名翻译后）精确比对本人，命中后强制锁定本人；
+      // 不做形近归位，避免把他人的表静默写到自己名下
+      if (rawName !== me.name) return { ok: false, msg: '只能导入自己的排班' };
+      finalName = me.name;
+      userId = me._id;
+    } else {
+      finalName = p.name;
+      userId = nameToId[finalName];
+      // 关键：finalName 已经是正式名时，不做近似归位（防止被脏别名"成员A"抢回去）
+      const isFormal2 = formalSet2.indexOf(finalName) > -1;
+      if (!userId && usersNames.length && !isFormal2) {
+        // 近似归位：与已有成员形近（编辑距离≤2/包含）→ 用已有成员，避免重复登记错名
+        const matched = normalizeName(finalName, usersNames);
+        if (matched !== finalName && nameToId[matched]) { finalName = matched; userId = nameToId[matched]; }
+      }
     }
+    const rows = p.rows.filter(function (r) { return r.date && r.shift; });
+    if (!rows.length) continue;
+    const monthKey = rows[0].date.slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) return { ok: false, msg: '日期格式不合法：' + rows[0].date };
+    for (const r of rows) {
+      if (r.date.slice(0, 7) !== monthKey) {
+        return { ok: false, msg: '预览包含多个月份，请重新识别或按月份分别导入' };
+      }
+      if (!isValidDate(r.date)) return { ok: false, msg: '日期不合法：' + r.date };
+    }
+    if (eventYear && eventMonth) {
+      const want = eventYear + '-' + String(eventMonth).padStart(2, '0');
+      if (monthKey !== want) {
+        return { ok: false, msg: '识别月份（' + monthKey + '）与选择月份（' + want + '）不一致，请校对' };
+      }
+    }
+    plans.push({ name: finalName, userId: userId, rows: rows, monthKey: monthKey });
+  }
+  if (!plans.length) return { ok: false, msg: '预览为空' };
+
+  let added = 0;
+  let updated = 0;
+  let removed = 0;
+  const newAdded = [];
+  for (const plan of plans) {
+    let userId = plan.userId;
     if (!userId) {
       // 自动登记：识别出的成员不在成员表 → 自动建档（openid 留空，本人登录后绑定）
       const addRes = await db.collection('users').add({
-        data: { name: finalName, openid: '', wxId: '', role: 'member', createdAt: db.serverDate() }
+        data: { name: plan.name, openid: '', wxId: '', role: 'member', createdAt: db.serverDate() }
       });
       userId = addRes._id;
-      nameToId[finalName] = userId;
-      usersNames.push(finalName);
-      newAdded.push(finalName);
+      nameToId[plan.name] = userId;
+      usersNames.push(plan.name);
+      newAdded.push(plan.name);
     }
-    for (const row of p.rows) {
-      if (!row.date || !row.shift) continue;
-      const exist = await db.collection('shifts').where({ userId: userId, date: row.date }).get();
-      if (exist.data.length) {
-        await db.collection('shifts').doc(exist.data[0]._id).update({
+
+    // 该成员该月已有记录（按日期分组，兼容历史重复记录）
+    const monthStart = plan.monthKey + '-01';
+    const monthEnd = plan.monthKey + '-31';
+    const existRes = await db.collection('shifts')
+      .where({ userId: userId, date: _.gte(monthStart).and(_.lte(monthEnd)) })
+      .get();
+    const byDate = {};
+    existRes.data.forEach(function (s) {
+      if (!byDate[s.date]) byDate[s.date] = [];
+      byDate[s.date].push(s);
+    });
+
+    const newDates = {};
+    for (const row of plan.rows) {
+      newDates[row.date] = true;
+      const list = byDate[row.date] || [];
+      if (list.length) {
+        // 同一天有多条历史记录时保留一条，其余删除
+        await db.collection('shifts').doc(list[0]._id).update({
           data: { shiftType: row.shift, updatedBy: OPENID, updatedAt: db.serverDate() }
         });
+        for (let i = 1; i < list.length; i++) {
+          await db.collection('shifts').doc(list[i]._id).remove();
+          removed += 1;
+        }
+        updated += 1;
       } else {
         await db.collection('shifts').add({
           data: { userId: userId, date: row.date, shiftType: row.shift, updatedBy: OPENID, updatedAt: db.serverDate() }
         });
+        added += 1;
       }
-      count += 1;
+    }
+
+    // 全量替换：删除该月未出现在新表中的旧记录
+    for (const d of Object.keys(byDate)) {
+      if (newDates[d]) continue;
+      for (const s of byDate[d]) {
+        await db.collection('shifts').doc(s._id).remove();
+        removed += 1;
+      }
     }
   }
+
+  const count = added + updated;
+  const summary = '新增 ' + added + '、更新 ' + updated + '、清空 ' + removed;
   const msg = newAdded.length
-    ? ('已自动登记新成员：' + newAdded.join('、') + '；共导入 ' + count + ' 条')
-    : ('导入成功（' + count + ' 条）');
-  return { ok: true, count: count, msg: msg, newMembers: newAdded };
+    ? ('已自动登记新成员：' + newAdded.join('、') + '；' + summary)
+    : ('导入完成：' + summary);
+  return {
+    ok: true,
+    count: count,
+    added: added,
+    updated: updated,
+    removed: removed,
+    msg: msg,
+    newMembers: newAdded
+  };
 };
 
 // 图片识别：真实调用 AI 视觉 API（火山方舟 ark chat/completions，支持视觉模型）
@@ -135,7 +245,7 @@ exports.main = async (event) => {
 //   - 表头行 = 日期（横排 1..31）；左列前两列 = 昵称、人员；交叉单元格 = 班次文本（休/正A/正B/售A/售B 等）
 //   - 成员名规则：优先取"昵称"列，昵称为空则取"人员"列
 //   - 班次规则：原样识别所有文本（售=晚班状态），不做白名单裁剪
-async function recognizeImage(fileID, targetName) {
+async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
   // 端点/Key/模型未配置 → 回退模拟数据，保证流程可跑通（配置见 config.json）
   if (!AI_VISION_ENDPOINT || AI_VISION_ENDPOINT.indexOf('your-') > -1 || !AI_VISION_API_KEY || !AI_VISION_MODEL) {
     return mockPreview();
@@ -150,9 +260,9 @@ async function recognizeImage(fileID, targetName) {
     '2) 忽略表格右侧的"小提示"说明区域，不要读取任何说明文字；',
     '3) 成员名优先取"昵称"列，昵称为空则取"人员"列；姓名只输出汉字，不要输出任何符号或字母；',
     '4) 每个单元格是一个完整班次，必须原样照抄（如：休、正、售后、A、B、正A、正B、售A、售B、IEB、年假），禁止把"正A"拆成"正"和"A"，只输出汉字或字母，禁止任何符号、图标、数字或解释；',
-    '5) 从标题识别月份（如"10月排岗表"→ month: 10），输出 month 字段（1~12）；',
-    '6) 表头日期为 1~31 号，严格按 1 号到 31 号顺序输出 days 数组（必须 31 项，无排班的格子填空字符串""，不得错位、不得漏天、不得多填）；',
-    '7) 只输出紧凑 JSON 数组（不要缩进换行），不要任何解释文字，格式：[{"name":"成员名","month":10,"days":["售A","休","","正A"]}]'
+    '5) 从标题识别年份与月份（如"2025年12月排岗表"→ year:2025, month:12）；标题没有年份时 year 输出当前年份；month 输出 1~12；',
+    '6) 按当月实际天数输出 days 数组（如 2 月 28/29 项、4 月 30 项），无排班的格子填空字符串""，不得错位、不得漏天；',
+    '7) 只输出紧凑 JSON 数组（不要缩进换行），不要任何解释文字，格式：[{"name":"成员名","year":2025,"month":10,"days":["售A","休","","正A"]}]'
   ];
   // 关键：如果指定了目标成员，只锁定那一行，忽略其他所有人（防止串列/错乱）
   if (targetName && targetName.trim() && targetName.trim() !== '全部') {
@@ -170,24 +280,31 @@ async function recognizeImage(fileID, targetName) {
   // 3. 解析响应中的 JSON（兼容：数组 / 对象包裹数组 / 单成员对象；兼容中文引号）
   const list = parsePreview(content);
   if (!list || !list.length) throw new Error('AI 未返回可解析的 JSON：' + String(content).slice(0, 200));
-  // 4. 转成 preview 结构：days 数组按 1~31 展开为日期；班次做常见误读归一化，未知保留原样
+  // 4. 转成 preview 结构：days 按当月天数展开为日期；班次做常见误读归一化
   const nowY = new Date().getFullYear();
   const curM = new Date().getMonth() + 1;
+  const yOverride = parseInt(yearOverride, 10) || 0;
+  const mOverride = parseInt(monthOverride, 10) || 0;
   return list
     .map(function (p) {
-      const month = parseInt(p.month, 10) || curM;
+      let year = parseInt(p.year, 10) || yOverride || nowY;
+      if (year < 2000 || year > 2100) year = yOverride || nowY;
+      let month = mOverride || parseInt(p.month, 10) || curM;
+      if (month < 1 || month > 12) month = curM;
       let days = Array.isArray(p.days) ? p.days : [];
-      // 强制 days 为 31 项：不足补空，超出截断（防止 AI 输出天数错乱）
-      if (days.length < 31) { while (days.length < 31) days.push(''); }
-      if (days.length > 31) { days = days.slice(0, 31); }
+      // 按当月实际天数补空/截断，避免写入 2 月 30、31 日之类非法日期
+      const maxDay = daysInMonth(year, month);
+      if (days.length < maxDay) { while (days.length < maxDay) days.push(''); }
+      if (days.length > maxDay) { days = days.slice(0, maxDay); }
       const cleanName = cleanText(p.name);
       return {
         name: cleanName,
+        year: year,
         month: month,
         rows: days.map(function (s, i) {
           const raw = cleanText(s);
           return {
-            date: nowY + '-' + String(month).padStart(2, '0') + '-' + String(i + 1).padStart(2, '0'),
+            date: year + '-' + String(month).padStart(2, '0') + '-' + String(i + 1).padStart(2, '0'),
             shift: NORMALIZE[raw] || raw
           };
         }).filter(function (r) { return r.shift; })
@@ -263,13 +380,21 @@ function normalizeName(name, users) {
   const t = String(name || '').trim();
   if (!t) return t;
   for (let i = 0; i < users.length; i++) { if (users[i] === t) return users[i]; }
+  // 单字姓名不做包含/形近归位，避免把“丙”这类新成员映射到“甲”
+  if (t.length < 2) return t;
   for (let i = 0; i < users.length; i++) {
+    if (!users[i]) continue;
     if (users[i].indexOf(t) > -1 || t.indexOf(users[i]) > -1) return users[i];
   }
-  let best = t, bestD = 3;
+  let best = t, bestD = 99;
   for (let i = 0; i < users.length; i++) {
-    const d = editDistance(t, users[i]);
-    if (d < bestD) { bestD = d; best = users[i]; }
+    const c = users[i];
+    if (!c || c.length <= 1) continue;
+    // 长度差超过 1 不做形近归位；2 字名最多容错 1，3 字及以上最多容错 2
+    if (Math.abs(t.length - c.length) > 1) continue;
+    const maxD = Math.min(t.length, c.length) >= 3 ? 2 : 1;
+    const d = editDistance(t, c);
+    if (d <= maxD && d < bestD) { bestD = d; best = c; }
   }
   return bestD <= 2 ? best : t;
 }

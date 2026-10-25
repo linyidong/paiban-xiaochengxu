@@ -100,7 +100,12 @@ Page({
       success: (up) => {
         wx.cloud.callFunction({
           name: 'importShift',
-          data: { fileID: up.fileID, sourceType: type, targetName: '' },
+          data: {
+            fileID: up.fileID,
+            sourceType: type,
+            // 成员只识别自己那一行（省 token、防串列）；管理员识别整表，后续可选人或全部
+            targetName: this.data.isAdmin ? '' : (this.data.boundMemberName || '')
+          },
           success: (res) => {
             const r = res.result || {};
             if (r.ok && r.preview && r.preview.length) {
