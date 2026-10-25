@@ -1,4 +1,5 @@
 // 云函数 login：登录鉴权，返回身份（admin/member）
+// 软删除的成员记录不参与身份判定；旧数据没有 isDeleted 字段时视为未删除
 const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 const db = cloud.database();
@@ -16,12 +17,13 @@ exports.main = async () => {
   const inWhitelist = cleanList.includes(cleanOpenid);
 
   const res = await users.where({ openid: OPENID }).get();
+  const active = res.data.filter(function (u) { return !u.isDeleted; });
   let role = inWhitelist ? 'admin' : 'member';
   let name = '';
   let needBind = false;
 
-  if (res.data.length === 0) {
-    // 无记录
+  if (active.length === 0) {
+    // 无有效记录（可能是首次登录，或原成员已被软删除）
     if (inWhitelist) {
       // 管理员：自动建档
       await users.add({
@@ -33,23 +35,23 @@ exports.main = async () => {
       // 非管理员：不建档，要求绑定成员
       needBind = true;
     }
-  } else if (res.data.length === 1) {
-    name = res.data[0].name || '';
+  } else if (active.length === 1) {
+    name = active[0].name || '';
     // 白名单优先；不匹配时回退数据库已有角色
-    if (!inWhitelist && res.data[0].role === 'admin') role = 'admin';
-    await users.doc(res.data[0]._id).update({ data: { role: role } });
+    if (!inWhitelist && active[0].role === 'admin') role = 'admin';
+    await users.doc(active[0]._id).update({ data: { role: role } });
     // 名字为空或"新成员"说明还没绑定
     if (!name || name === '新成员') {
       needBind = true;
       name = '';
     }
   } else {
-    // 同一 openid 绑定了多个成员 → 合并：保留有排班数据的那个，其余解绑
+    // 同一 openid 绑定了多个有效成员 → 合并：保留有排班数据的那个，其余解绑
     const shifts = db.collection('shifts');
-    let keepId = res.data[0]._id;
-    let keepName = res.data[0].name || '';
+    let keepId = active[0]._id;
+    let keepName = active[0].name || '';
     // 找有排班数据的成员
-    for (const u of res.data) {
+    for (const u of active) {
       const sRes = await shifts.where({ userId: u._id }).count();
       if (sRes.total > 0) {
         keepId = u._id;
@@ -58,13 +60,13 @@ exports.main = async () => {
       }
     }
     // 解绑其他成员
-    for (const u of res.data) {
+    for (const u of active) {
       if (u._id !== keepId) {
         await users.doc(u._id).update({ data: { openid: '' } });
       }
     }
     // 更新保留的成员角色
-    if (!inWhitelist && res.data[0].role === 'admin') role = 'admin';
+    if (!inWhitelist && active[0].role === 'admin') role = 'admin';
     await users.doc(keepId).update({ data: { role: role } });
     name = keepName;
     if (!name || name === '新成员') {

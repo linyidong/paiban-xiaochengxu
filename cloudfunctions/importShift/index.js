@@ -33,7 +33,7 @@ exports.main = async (event) => {
     let users = [];
     try {
       const usersRes = await db.collection('users').limit(100).get();
-      users = usersRes.data.filter(function (u) { return u.name; }).map(function (u) { return u.name; });
+      users = usersRes.data.filter(function (u) { return u.name && !u.isDeleted; }).map(function (u) { return u.name; });
     } catch (e) { /* users 查询失败不阻塞识别 */ }
     const formalNames = Object.keys(MEMBER_ALIAS || {}).concat(users);
     const formalSet = Object.keys(MEMBER_ALIAS || {});
@@ -71,11 +71,21 @@ exports.main = async (event) => {
   const { preview, year, month } = event;
   if (!preview || !preview.length) return { ok: false, msg: '预览为空' };
   const usersRes = await db.collection('users').limit(100).get();
+  // 软删除成员不参与匹配/自动登记；同名已删除成员必须由管理员先恢复
+  const activeUsers = usersRes.data.filter(function (u) { return !u.isDeleted; });
+  const deletedNames = {};
+  usersRes.data.forEach(function (u) { if (u.isDeleted && u.name) deletedNames[u.name] = true; });
+  for (const p of preview) {
+    const raw = translateAlias(p.name || '');
+    if (deletedNames[p.name] || deletedNames[raw]) {
+      return { ok: false, msg: '成员「' + (p.name || raw) + '」已删除，请先恢复' };
+    }
+  }
   const nameToId = {};
-  usersRes.data.forEach(function (u) { if (u.name) nameToId[u.name] = u._id; });
+  activeUsers.forEach(function (u) { if (u.name) nameToId[u.name] = u._id; });
   let count = 0;
   let newAdded = [];
-  const usersNames = usersRes.data.map(function (u) { return u.name; });
+  const usersNames = activeUsers.map(function (u) { return u.name; });
   const formalSet2 = Object.keys(MEMBER_ALIAS || {});
   for (const p of preview) {
     let finalName = p.name;

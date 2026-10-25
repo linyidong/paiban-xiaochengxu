@@ -17,12 +17,39 @@ function createState() {
   };
 }
 
+function op(name, value) {
+  return {
+    __op: name,
+    value: value,
+    and: function (other) { return { __op: 'and', ops: [this, other] }; }
+  };
+}
+
+const command = {
+  gte: function (v) { return op('gte', v); },
+  lte: function (v) { return op('lte', v); },
+  neq: function (v) { return op('neq', v); },
+  eq: function (v) { return op('eq', v); }
+};
+
+function valueMatch(docVal, expected) {
+  if (expected && typeof expected === 'object' && expected.__op) {
+    if (expected.__op === 'and') return expected.ops.every(function (o) { return valueMatch(docVal, o); });
+    if (expected.__op === 'gte') return docVal >= expected.value;
+    if (expected.__op === 'lte') return docVal <= expected.value;
+    if (expected.__op === 'neq') return docVal !== expected.value;
+    if (expected.__op === 'eq') return docVal === expected.value;
+  }
+  return docVal === expected;
+}
+
 function match(doc, cond) {
-  return Object.keys(cond).every(function (k) { return doc[k] === cond[k]; });
+  return Object.keys(cond).every(function (k) { return valueMatch(doc[k], cond[k]); });
 }
 
 function createDb(state) {
   return {
+    command: command,
     serverDate: function () { return new Date(); },
     collection: function (name) {
       const arr = state[name] || (state[name] = []);
@@ -44,6 +71,8 @@ function createDb(state) {
       return {
         where: query,
         get: async function () { return { data: arr.slice() }; },
+        orderBy: function () { return query({}); },
+        limit: function () { return query({}); },
         add: async function (payload) {
           const d = Object.assign({ _id: 'x' + (++state.seq) }, payload.data);
           arr.push(d);

@@ -46,13 +46,15 @@ exports.main = async (event) => {
   }
 
   const meRes = await db.collection('users').where({ openid: OPENID }).get();
-  if (!meRes.data.length) return { ok: false, msg: '用户不存在，请先登录' };
-  const me = meRes.data[0];
+  const meActive = meRes.data.filter(function (u) { return !u.isDeleted; });
+  if (!meActive.length) return { ok: false, msg: '用户不存在或已被移除，请先登录' };
+  const me = meActive[0];
 
   const targetRes = await db.collection('users').where({ name: name }).get();
-  if (!targetRes.data.length) return { ok: false, msg: '目标成员不存在' };
-  if (targetRes.data.length > 1) return { ok: false, msg: '成员姓名重复，请联系管理员处理' };
-  const target = targetRes.data[0];
+  const targetActive = targetRes.data.filter(function (u) { return !u.isDeleted; });
+  if (!targetActive.length) return { ok: false, msg: '目标成员不存在或已删除' };
+  if (targetActive.length > 1) return { ok: false, msg: '成员姓名重复，请联系管理员处理' };
+  const target = targetActive[0];
 
   // 权限：本人，或管理员（白名单优先，兼容库内 role）
   const cleanMe = cleanOpenid(OPENID);

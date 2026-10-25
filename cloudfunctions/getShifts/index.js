@@ -10,7 +10,9 @@ exports.main = async (event) => {
   const { year, month, monthOnly, yearData } = event;
 
   const usersRes = await db.collection('users').limit(100).get();
-  const members = usersRes.data.map(function (u) { return { _id: u._id, name: u.name, role: u.role }; });
+  // 软删除的成员不进入成员列表与排班映射（旧数据无 isDeleted 字段视为未删除）
+  const activeUsers = usersRes.data.filter(function (u) { return !u.isDeleted; });
+  const members = activeUsers.map(function (u) { return { _id: u._id, name: u.name, role: u.role }; });
 
   if (monthOnly) return { ok: true, members: members };
 
@@ -23,11 +25,12 @@ exports.main = async (event) => {
       .limit(2000)
       .get();
     const idToName = {};
-    usersRes.data.forEach(function (u) { idToName[u._id] = u.name; });
-    // 按成员 → 月份 聚合
+    activeUsers.forEach(function (u) { idToName[u._id] = u.name; });
+    // 按成员 → 月份 聚合（跳过已删除成员的排班）
     const memberMonths = {};
     shiftRes.data.forEach(function (s) {
-      const n = idToName[s.userId] || s.userId;
+      const n = idToName[s.userId];
+      if (!n) return;
       const m = parseInt(s.date.split('-')[1], 10);
       if (!memberMonths[n]) memberMonths[n] = [];
       if (memberMonths[n].indexOf(m) === -1) memberMonths[n].push(m);
@@ -46,10 +49,11 @@ exports.main = async (event) => {
     .get();
 
   const idToName = {};
-  usersRes.data.forEach(function (u) { idToName[u._id] = u.name; });
+  activeUsers.forEach(function (u) { idToName[u._id] = u.name; });
   const shiftsMap = {};
   shiftRes.data.forEach(function (s) {
-    const n = idToName[s.userId] || s.userId;
+    const n = idToName[s.userId];
+    if (!n) return;
     if (!shiftsMap[n]) shiftsMap[n] = {};
     shiftsMap[n][s.date] = s.shiftType;
   });

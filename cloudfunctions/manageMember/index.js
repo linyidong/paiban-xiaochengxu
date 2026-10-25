@@ -13,7 +13,8 @@ async function checkAdmin(OPENID) {
   let isAdmin = cleanAdmins.includes(cleanOpenid);
   if (!isAdmin) {
     const meRes = await db.collection('users').where({ openid: OPENID }).get();
-    if (meRes.data.length && meRes.data[0].role === 'admin') isAdmin = true;
+    const me = meRes.data.filter(function (u) { return !u.isDeleted; })[0];
+    if (me && me.role === 'admin') isAdmin = true;
   }
   return isAdmin;
 }
@@ -29,7 +30,7 @@ exports.main = async (event) => {
     const res = await db.collection('users').orderBy('createdAt', 'asc').limit(100).get();
     return {
       ok: true,
-      members: res.data.map(function (u) {
+      members: res.data.filter(function (u) { return !u.isDeleted; }).map(function (u) {
         return { _id: u._id, name: u.name, wxId: u.wxId || '', role: u.role, openid: u.openid || '', createdAt: u.createdAt };
       })
     };
@@ -39,8 +40,12 @@ exports.main = async (event) => {
     const bindName = (event.name || '').trim();
     if (!bindName) return { ok: false, msg: '请选择成员' };
     const target = await db.collection('users').where({ name: bindName }).get();
-    if (!target.data.length) return { ok: false, msg: '成员不存在' };
-    const doc = target.data[0];
+    const active = target.data.filter(function (u) { return !u.isDeleted; });
+    if (!active.length) {
+      if (target.data.length) return { ok: false, msg: '该成员已删除，请联系管理员恢复' };
+      return { ok: false, msg: '成员不存在' };
+    }
+    const doc = active[0];
     if (doc.openid && doc.openid !== OPENID) return { ok: false, msg: '该成员已被其他用户绑定，请联系管理员解绑' };
     await db.collection('users').doc(doc._id).update({
       data: { openid: OPENID, role: doc.role || 'member' }
@@ -50,13 +55,16 @@ exports.main = async (event) => {
 
   if (action === 'createAndBind') {
     const myBound = await db.collection('users').where({ openid: OPENID }).get();
-    if (myBound.data.length) {
-      return { ok: false, msg: 'alreadyBound', boundName: myBound.data[0].name };
+    const myActive = myBound.data.filter(function (u) { return !u.isDeleted; });
+    if (myActive.length) {
+      return { ok: false, msg: 'alreadyBound', boundName: myActive[0].name };
     }
     const newName = (event.name || '').trim();
     if (!newName) return { ok: false, msg: '请输入成员昵称' };
     const dup = await db.collection('users').where({ name: newName }).get();
     if (dup.data.length) {
+      const deleted = dup.data.filter(function (u) { return u.isDeleted; });
+      if (deleted.length) return { ok: false, msg: '该昵称已存在（可能已删除），请联系管理员' };
       if (!dup.data[0].openid || dup.data[0].openid === OPENID) {
         await db.collection('users').doc(dup.data[0]._id).update({
           data: { openid: OPENID, role: dup.data[0].role || 'member' }
@@ -79,7 +87,10 @@ exports.main = async (event) => {
     const name = (event.name || '').trim();
     if (!name) return { ok: false, msg: '缺少姓名' };
     const dup = await db.collection('users').where({ name: name }).get();
-    if (dup.data.length) return { ok: false, msg: '该姓名已存在' };
+    if (dup.data.length) {
+      const deleted = dup.data.filter(function (u) { return u.isDeleted; });
+      return { ok: false, msg: deleted.length ? '该姓名已存在（可能已删除）' : '该姓名已存在' };
+    }
     await db.collection('users').add({
       data: { name: name, wxId: (event.wxId || '').trim(), role: 'member', openid: '', createdAt: db.serverDate() }
     });
@@ -90,18 +101,20 @@ exports.main = async (event) => {
     const id = event.id;
     if (!id) return { ok: false, msg: '缺少id' };
     const target = await db.collection('users').doc(id).get().catch(function () { return { data: null }; });
-    if (!target.data) return { ok: false, msg: '成员不存在' };
+    if (!target.data || target.data.isDeleted) return { ok: false, msg: '成员不存在' };
     if (target.data.role === 'admin') return { ok: false, msg: '不能移除管理员' };
-    await db.collection('shifts').where({ userId: id }).remove();
-    await db.collection('users').doc(id).remove();
-    return { ok: true };
+    // 软删除：只打标记，保留 users 与 shifts，便于恢复与追溯
+    await db.collection('users').doc(id).update({
+      data: { isDeleted: true, deletedAt: db.serverDate() }
+    });
+    return { ok: true, softDeleted: true, shiftsPreserved: true };
   }
 
   if (action === 'unbind') {
     const id = event.id;
     if (!id) return { ok: false, msg: '缺少成员id' };
     const target = await db.collection('users').doc(id).get().catch(function () { return { data: null }; });
-    if (!target.data) return { ok: false, msg: '成员不存在' };
+    if (!target.data || target.data.isDeleted) return { ok: false, msg: '成员不存在' };
     await db.collection('users').doc(id).update({
       data: { openid: '' }
     });

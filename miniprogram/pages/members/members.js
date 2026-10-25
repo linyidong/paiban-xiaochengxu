@@ -34,7 +34,7 @@ Page({
     const name = e.currentTarget.dataset.name;
     wx.showModal({
       title: '移除成员',
-      content: '确定移除 ' + name + '？该成员的排班记录也将被删除。',
+      content: '确定移除 ' + name + '？成员将从列表隐藏，历史排班保留。',
       confirmColor: '#EF4444',
       success: (r) => {
         if (!r.confirm) return;
