@@ -106,6 +106,13 @@
 | `--color-danger` | `#B91C1C` | 删除/错误 | on 白 = 6.47:1 |
 | `--color-border` | `#E2E8E5` | 分隔线/描边 | 非文字，仅需可见 |
 | `--focus-ring` | `#0F766E` | 焦点态 | 与主色一致 |
+| `--color-blue-tint` | `#EFF6FF` | 日历批量/成员浅蓝底 | `#1E40AF` on it = 8.01:1 |
+| `--color-blue-tint-strong` | `#DBEAFE` | 成员选中浅蓝底 | `#1E3A8A` on it = 8.49:1 |
+| `--color-blue-border` | `#BFDBFE` | 浅蓝描边 | — |
+| `--color-blue-text` | `#1E40AF` | 浅蓝底文字 | on 白 = 8.72:1 |
+| `--color-blue` | `#1D4ED8` | 批量激活/选中描边 | 白字 = 6.70:1 |
+
+> 2026-10-25 用户指定：日历“批量/完成”与成员名字使用浅蓝底（D-011）；这是局部强调色，不改变全局深青绿主色。
 
 **班次色（白字，全部 ≥4.5:1）**
 
