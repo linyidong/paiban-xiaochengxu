@@ -128,9 +128,8 @@ Page({
         const usedTypes = Object.keys(myMap).map(function (d) {
           return String(myMap[d] || '').replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '').trim();
         }).filter(Boolean);
-        // 默认：管理员固定 4 状态；成员有细分班次则 6 状态；手动切换后本次加载不覆盖
+        // 默认：管理员固定 4 状态；成员有非基础班次则 6 状态；手动切换后跨月保持
         const shiftMode = this._modeManual ? this.data.shiftMode : detectShiftMode(usedTypes, !!(selectedData && selectedData.role === 'admin'));
-        this._modeManual = false;
         this.setData({ shiftMode: shiftMode });
         const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
         // 立即更新 hasData，不等待备忘录加载

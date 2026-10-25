@@ -57,7 +57,7 @@
   <view class="mask" wx:if="{{showPicker}}" bindtap="closePicker"></view>
   <view class="picker-panel" wx:if="{{showPicker}}">
     <view class="picker-title">{{pickerTitle}}</view>
-    <view class="picker-modes" wx:if="{{!selectedIsAdmin}}">
+    <view class="picker-modes">
       <view class="picker-mode {{shiftMode === 'basic' ? 'on' : ''}}" data-mode="basic" bindtap="onSwitchShiftMode">4 状态</view>
       <view class="picker-mode {{shiftMode === 'special' ? 'on' : ''}}" data-mode="special" bindtap="onSwitchShiftMode">6 状态</view>
     </view>
