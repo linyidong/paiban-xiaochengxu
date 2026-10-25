@@ -24,9 +24,8 @@
 }
 /* 批量按钮：占一个日期格，整格可点；文字与同排日期数字对齐 */
 .batch-cell {
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding-top: 6rpx;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
 }
 .batch-btn {
