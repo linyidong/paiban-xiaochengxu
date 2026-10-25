@@ -42,8 +42,8 @@
 .legend-actions { display: flex; flex-direction: column; gap: 16rpx; margin-top: 24rpx; }
 .legend-act-btn { text-align: center; font-size: 30rpx; padding: 20rpx 0; border-radius: 12rpx; min-height: 88rpx; box-sizing: border-box; }
 .legend-act-delete {
-  color: var(--color-blue-text); font-size: 30rpx; font-weight: 600;
-  border: 2rpx solid var(--color-blue-border); background: var(--color-blue-tint);
+  color: var(--color-danger); font-size: 30rpx; font-weight: 600;
+  border: 2rpx solid #FEE2E2; background: var(--color-danger-tint);
 }
 
 .multi-bar {

@@ -70,8 +70,8 @@ Page({
     if (pending) wx.removeStorageSync('importTarget');
     const year = pending && pending.year ? Number(pending.year) : currentYear;
     const month = pending && pending.month ? Number(pending.month) : now.getMonth() + 1;
-    // 管理员初始不锁定“管理员”伪成员，默认展示第一个真实成员；可在成员横滑中点“管理员”
-    const preferredMember = (pending && pending.name) || (session.role === 'admin' ? '' : (session.name || ''));
+    // 管理员默认进入自己的日历（“管理员”记录），也可在成员横滑切换
+    const preferredMember = (pending && pending.name) || session.name || '';
     this.setData({
       year: year,
       month: month,
