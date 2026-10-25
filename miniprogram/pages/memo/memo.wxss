@@ -1,44 +1,39 @@
+/* 备忘录页样式：使用设计 token（T-015 迁移） */
 .memo-page { padding-bottom: 40rpx; }
-.memo-header {
-  margin-bottom: 24rpx;
-}
-.memo-title-row {
-  display: flex; align-items: center; gap: 16rpx;
-}
-.memo-title { font-size: 32rpx; font-weight: 600; }
-.memo-format-hint {
-  font-size: 24rpx; color: #9CA3AF;
-}
+.memo-header { margin-bottom: 24rpx; }
+.memo-title-row { display: flex; align-items: center; gap: 16rpx; }
+.memo-title { font-size: 32rpx; font-weight: 600; color: var(--color-text); }
+.memo-format-hint { font-size: 28rpx; color: var(--color-text-muted); }
 .memo-input {
-  background: #F9FAFB; border-radius: 16rpx; padding: 20rpx 24rpx;
-  font-size: 28rpx; min-height: 160rpx; box-sizing: border-box;
-  width: 100%;
+  background: var(--color-bg); border-radius: 12rpx; padding: 22rpx 24rpx;
+  font-size: 32rpx; min-height: 160rpx; box-sizing: border-box; width: 100%;
+  color: var(--color-text);
 }
 .memo-add-btn { margin-top: 32rpx; }
 .memo-cancel-btn {
-  margin-top: 16rpx; background: #F3F4F6; color: #6B7280;
-  border-radius: 16rpx; font-size: 28rpx;
+  margin-top: 16rpx; background: var(--color-bg); color: var(--color-text-secondary);
+  border-radius: 12rpx; font-size: 32rpx; min-height: 88rpx; line-height: 88rpx;
 }
-.memo-list-header {
-  padding: 16rpx 24rpx;
-}
-.memo-month-card {
-  margin-top: 24rpx;
-}
+.memo-list-header { padding: 16rpx 24rpx; }
+.memo-month-card { margin-top: 24rpx; }
 .memo-month-header {
-  font-size: 26rpx; color: #6B7280; font-weight: 600;
-  padding: 0 0 12rpx; border-bottom: 2rpx solid #E5E7EB;
+  font-size: 28rpx; color: var(--color-text-secondary); font-weight: 600;
+  padding: 0 0 12rpx; border-bottom: 2rpx solid var(--color-border);
   margin-bottom: 8rpx;
 }
 .memo-item {
   display: flex; align-items: flex-start; justify-content: space-between;
-  padding: 20rpx 0; border-bottom: 2rpx solid #F3F4F6;
+  padding: 20rpx 0; border-bottom: 2rpx solid var(--color-border);
 }
 .memo-item:last-child { border-bottom: none; }
 .memo-content { flex: 1; }
-.memo-text { font-size: 32rpx; font-weight: 600; color: #374151; line-height: 1.6; }
-.memo-time { font-size: 22rpx; color: #9CA3AF; margin-top: 8rpx; }
+.memo-text { font-size: 32rpx; font-weight: 600; color: var(--color-text); line-height: 1.6; }
+.memo-time { font-size: 26rpx; color: var(--color-text-muted); margin-top: 8rpx; }
 .memo-actions { display: flex; gap: 16rpx; flex-shrink: 0; }
-.memo-edit { color: #3B82F6; font-size: 24rpx; padding: 8rpx 16rpx; }
-.memo-delete { color: #EF4444; font-size: 24rpx; padding: 8rpx 16rpx; }
-.memo-empty { text-align: center; color: #9CA3AF; font-size: 26rpx; padding: 40rpx 0; }
+.memo-edit, .memo-delete {
+  font-size: 28rpx; padding: 0 20rpx; min-height: 88rpx;
+  display: flex; align-items: center;
+}
+.memo-edit { color: var(--color-primary); }
+.memo-delete { color: var(--color-danger); }
+.memo-empty { text-align: center; color: var(--color-text-muted); font-size: 28rpx; padding: 40rpx 0; }

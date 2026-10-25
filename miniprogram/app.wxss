@@ -10,6 +10,8 @@ page {
   --color-primary-strong: #115E59;
   --color-danger: #B91C1C;
   --color-warning: #B45309;
+  --color-warning-strong: #92400E;
+  --color-success: #166534;
   --color-primary-tint: #ECFDF5;
   --color-danger-tint: #FEF2F2;
   --color-border: #E2E8E5;
