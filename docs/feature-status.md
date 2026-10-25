@@ -42,7 +42,7 @@ PRD（阶段 5）按需求合并为 F-001～F-015；本文件保留阶段 4 的�
 | F-002 | 绑定已有成员 | 保留 | 已实现 | `manageMember/index.js:38-49` | 未绑定成员可绑定；已被他人绑定返回明确错误 | 无 | 待验证 |
 | F-003 | 创建并绑定成员 | 保留 | 已实现 | `manageMember/index.js:51-72` | 新名创建 1 条 user；重名且已绑定返回 `该昵称已被使用` | 无 | 待验证 |
 | F-004 | 管理员白名单 | 保留 | 已实现 | `login/index.js:15-16` | `ADMIN_OPENIDS` 内用户必为 admin | 无 | 待验证 |
-| F-005 | 成员列表 | 修复 | 已实现（暴露 openid） | `manageMember/index.js:28-36`、`members.wxml:13-16` | 列表不含 openid 或仅本人可见 | 无 | 待修（BUG-017） |
+| F-005 | 成员列表 | 修复 | 已修：openid 仅管理员可见 | `manageMember/index.js:28-36`、`members.wxml`（T-012） | 列表不含 openid 或仅本人可见 | 有（T-012 用例） | 待部署 |
 | F-006 | 解绑成员 | 保留 | 已实现 | `manageMember/index.js:100-109` | 解绑后该成员可被重新绑定 | 无 | 待验证 |
 | F-007 | 移除成员 | 修复 | 已修：软删除保留排班 | `manageMember/index.js:89-98`（T-003） | 删除前文案与真实行为一致；排班处理方式符合 Q-003 | 有（T-003 用例 9 条） | 待部署 |
 | F-008 | 新增成员（管理员） | 未完成 | 已实现：管理页入口 + 后端 add | `manageMember/index.js:78-87`、`members.wxml`（T-007） | 管理页可新增成员，列表出现 1 条记录 | 有（T-007 用例） | 待部署 |
