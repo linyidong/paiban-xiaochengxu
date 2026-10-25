@@ -22,7 +22,7 @@
 | BUG-013 | “白班/晚班”硬编码与 11 种班次配置不一致 | 选中管理员行或查看默认图例 → 显示 休/白班/晚班/年假/取消 | `calendar.js:5-6`（`DEFAULT_SHIFTS`）vs `miniprogram/config.js:5-17`（11 种）；`calendar.js:4` 引入 `SHIFT_TYPES` 但全文未使用 | 班次体系一致性 | 中 | 已修（T-005，待部署） |
 | BUG-014 | Excel 导入不可用 | 导入页无 Excel 入口；即使调用 `sourceType:'excel'` 也返回空 | `importShift/index.js:364-371`（`parseExcel` 空实现）；`import.js:54`（只允许图片） | 与文档承诺不符 | 中 | 待修/待定 |
 | BUG-015 | 无“整表导入（全部）” | 多人识别后只能单选一人导入 | `import.js:124-139`、`:160-173` | 多成员导入效率/费用 | 中 | 待修/待定 |
-| BUG-016 | 成员管理页无“新增成员”入口 | 后端 `add` 存在，前端只有解绑/移除 | `manageMember/index.js:78-87` 无 UI 调用 | 管理员能力缺失 | 低 | 待修/待定 |
+| BUG-016 | 成员管理页无“新增成员”入口 | 后端 `add` 存在，前端只有解绑/移除 | `manageMember/index.js:78-87` 无 UI 调用 | 管理员能力缺失 | 低 | 已修（T-007，待部署） |
 | BUG-017 | 成员页展示完整 openid；`list` 向所有人返回 openid | 任意成员调用 `manageMember.list` 即得全量 openid | `manageMember/index.js:28-35`、`members.wxml:13-16` | 隐私 | 低 | 待修 |
 | BUG-018 | 批量按钮绝对定位可能遮挡日历 | 小屏机型查看日历 | `calendar.wxss:27-32`（`top:480rpx` 固定值） | 视觉 | 低 | 待修（待真机确认） |
 | BUG-019 | 排班查询静默截断 | 成员数 × 天数 > 1000 时，部分排班不显示；年度高亮 > 2000 时不全 | `getShifts/index.js:45`（`limit(1000)`）、`:23`（`limit(2000)`） | 大数据量正确性 | 高（容量） | 待修（T-010） |
