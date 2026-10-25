@@ -49,7 +49,7 @@
       </view>
     </view>
     <view class="legend-actions">
-      <view class="legend-act-btn legend-act-delete" wx:if="{{isAdmin}}" bindtap="onDeleteMember">删除成员</view>
+      <view class="legend-act-btn legend-act-delete" wx:if="{{isAdmin && !selectedIsAdmin}}" bindtap="onDeleteMember">删除成员</view>
     </view>
   </view>
 
@@ -57,13 +57,17 @@
   <view class="mask" wx:if="{{showPicker}}" bindtap="closePicker"></view>
   <view class="picker-panel" wx:if="{{showPicker}}">
     <view class="picker-title">{{pickerTitle}}</view>
+    <view class="picker-modes" wx:if="{{!selectedIsAdmin}}">
+      <view class="picker-mode {{shiftMode === 'basic' ? 'on' : ''}}" data-mode="basic" bindtap="onSwitchShiftMode">4 状态</view>
+      <view class="picker-mode {{shiftMode === 'special' ? 'on' : ''}}" data-mode="special" bindtap="onSwitchShiftMode">6 状态</view>
+    </view>
     <view class="picker-grid">
       <view class="picker-item" wx:for="{{shiftOptions}}" wx:key="type"
             data-type="{{item.type}}" bindtap="onPickShift">
         <view class="picker-dot" style="background:{{item.color}}"></view>{{item.type}}
       </view>
     </view>
-    <view class="picker-cancel" bindtap="closePicker">取消</view>
+    <view class="picker-cancel" bindtap="closePicker">关闭</view>
   </view>
 
   <!-- 年月选择器：下滑面板 -->

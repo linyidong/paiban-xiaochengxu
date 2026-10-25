@@ -62,6 +62,14 @@
   box-shadow: 0 8rpx 40rpx rgba(20,35,31,0.15);
 }
 .picker-title { text-align: center; font-size: 32rpx; font-weight: 600; margin-bottom: 24rpx; color: var(--color-text); }
+/* 4 状态 / 6 状态切换 */
+.picker-modes { display: flex; gap: 16rpx; margin-bottom: 24rpx; }
+.picker-mode {
+  flex: 1; text-align: center; font-size: 28rpx; color: var(--color-text-secondary);
+  background: var(--color-bg); border-radius: 12rpx; padding: 16rpx 0;
+  min-height: 72rpx; box-sizing: border-box; line-height: 40rpx;
+}
+.picker-mode.on { background: var(--color-primary); color: #FFFFFF; font-weight: 600; }
 .picker-grid { display: flex; flex-wrap: wrap; }
 .picker-item {
   width: 25%; display: flex; flex-direction: column; align-items: center;

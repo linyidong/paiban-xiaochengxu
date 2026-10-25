@@ -1,7 +1,7 @@
 // 首页·日历视图：月历 + 班次标记 + 点击日期弹窗选班次（长按/批量按钮进入多选，统一设置）
 const app = getApp();
 const cal = require('../../utils/calendar.js');
-const { getShiftColor, getShiftOptions, getDisplayName } = require('../../utils/shift.js');
+const { getShiftColor, getShiftOptions, detectShiftMode, getDisplayName } = require('../../utils/shift.js');
 const { pickMember } = require('../../utils/member.js');
 function normalizeDigits(text) {
   text = String(text).replace(/[\uff10-\uff19]/g, function (ch) {
@@ -42,6 +42,9 @@ Page({
     multiSelect: false,
     selectedDates: [],
     isAdmin: false,
+    selectedIsAdmin: false,
+    // 手动排班状态：basic(4 状态) / special(6 状态)
+    shiftMode: 'basic',
     // 年月选择弹窗
     showDatePicker: false,
     datePickMode: 'year',  // 'year' 选年份, 'month' 选月份
@@ -112,14 +115,23 @@ Page({
         const members = allMembers;
         const session = wx.getStorageSync('session') || {};
         const selectedMember = pickMember(allMembers, this.data.selectedMember);
+        const selectedData = allMembers.filter(function (m) { return m.name === selectedMember; })[0];
         this.setData({
           members: members,
           isAdmin: session.role === 'admin',
-          selectedMember: selectedMember
+          selectedMember: selectedMember,
+          selectedIsAdmin: !!(selectedData && selectedData.role === 'admin')
         });
         // 判断当前选中成员在该月是否有排班数据
         const map = r.shiftsMap || {};
         const myMap = map[selectedMember] || {};
+        const usedTypes = Object.keys(myMap).map(function (d) {
+          return String(myMap[d] || '').replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '').trim();
+        }).filter(Boolean);
+        // 默认：管理员固定 4 状态；成员有细分班次则 6 状态；手动切换后本次加载不覆盖
+        const shiftMode = this._modeManual ? this.data.shiftMode : detectShiftMode(usedTypes, !!(selectedData && selectedData.role === 'admin'));
+        this._modeManual = false;
+        this.setData({ shiftMode: shiftMode });
         const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
         // 立即更新 hasData，不等待备忘录加载
         this.setData({ hasData: hasData });
@@ -152,15 +164,31 @@ Page({
     this.updateShiftDisplay(myMap);
   },
   updateShiftDisplay(myMap) {
-    // 统一班次源：config.SHIFT_TYPES + 取消；图例与弹窗同源，不再按“已用班次”裁剪
-    const items = getShiftOptions();
-    this.setData({ legendItems: items, shiftOptions: items });
+    const map = myMap || this._lastMap[this.data.selectedMember] || {};
+    // 追加该成员本月已出现的班次，保证历史数据可编辑；管理员自己的日历严格 4 状态
+    const used = Object.keys(map).map(function (d) {
+      return String(map[d] || '').replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '').trim();
+    }).filter(Boolean);
+    const includeUsed = !this.data.selectedIsAdmin;
+    // 弹窗选项：严格按当前 4/6 状态；图例额外展示该成员本月已出现过的班次，便于解释旧数据
+    const options = getShiftOptions(this.data.shiftMode, used, !this.data.selectedIsAdmin);
+    const legend = getShiftOptions(this.data.shiftMode, used, includeUsed);
+    this.setData({ shiftOptions: options, legendItems: legend });
   },
   onSelectMember(e) {
     const name = e.currentTarget.dataset.name;
-    this.setData({ selectedMember: name });
-    this.applyShifts();
+    const m = this.data.members.filter(function (x) { return x.name === name; })[0];
     const myMap = this._lastMap[name] || {};
+    const used = Object.keys(myMap).map(function (d) {
+      return String(myMap[d] || '').replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '').trim();
+    }).filter(Boolean);
+    this._modeManual = false;
+    this.setData({
+      selectedMember: name,
+      selectedIsAdmin: !!(m && m.role === 'admin'),
+      shiftMode: detectShiftMode(used, !!(m && m.role === 'admin'))
+    });
+    this.applyShifts();
     const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
     this.setData({ hasData: hasData });
     this._loadMemosForMonth(hasData);
@@ -281,6 +309,15 @@ Page({
     this.setData({ selectedDates: sel });
     this.applyShifts();
   },
+  // 手动切换 4 状态 / 6 状态（仅成员日历）
+  onSwitchShiftMode(e) {
+    const mode = e.currentTarget.dataset.mode;
+    if (mode !== 'basic' && mode !== 'special') return;
+    if (mode === this.data.shiftMode) return;
+    this._modeManual = true;
+    this.setData({ shiftMode: mode });
+    this.updateShiftDisplay();
+  },
   // 日历格内的“批量/完成”按钮（组件 batch 事件）
   onBatchTap() {
     this.onToggleMulti();
@@ -304,7 +341,7 @@ Page({
     // 使用已根据成员实际排班数据计算的选项
     var options = this.data.shiftOptions;
     if (!options.length) {
-      options = getShiftOptions();
+      options = getShiftOptions(this.data.shiftMode);
     }
     this.setData({ showPicker: true, pickerTitle: title, pendingDates: dates, shiftOptions: options });
   },

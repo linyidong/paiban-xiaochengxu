@@ -12,6 +12,8 @@ payload = {
     "env": fe["云环境ID"],
     "SHIFT_TYPES": fe["班次列表"],
     "SHIFT_COLOR": fe["班次颜色"],
+    "BASIC_SHIFTS": fe["4状态班次"],
+    "SPECIAL_SHIFTS": fe["6状态班次"],
     "MEMBER_ALIAS": cf["成员别名映射"],
     "STYLE": {
         "bg": fe["界面样式"]["背景色"],
