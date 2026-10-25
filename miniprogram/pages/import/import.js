@@ -197,6 +197,20 @@ Page({
   onCancelSelect() {
     this.setData({ showMemberSelect: false, recognizedMembers: [], fullPreview: null });
   },
+  // 管理员：整表导入（一次识别、一次提交写入全部成员）
+  onSelectAllMembers() {
+    const full = this.data.fullPreview || [];
+    if (!full.length) return;
+    this.setData({
+      showMemberSelect: false,
+      recognizedMembers: [],
+      preview: full,
+      fullPreview: full,
+      targetName: '全部'
+    });
+    wx.showToast({ title: '将导入 ' + full.length + ' 位成员', icon: 'none' });
+    setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
+  },
   // 非管理员绑定确认：确定 → 把识别到的成员替换为已绑定成员名，直接显示预览
   onConfirmBindRecognized() {
     const boundName = this.data.boundMemberName;
