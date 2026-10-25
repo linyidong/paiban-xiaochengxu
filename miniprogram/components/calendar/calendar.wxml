@@ -3,10 +3,17 @@
     <view class="week-cell" wx:for="{{['一','二','三','四','五','六','日']}}" wx:key="*this">{{item}}</view>
   </view>
   <view class="day-grid">
-    <view class="day-cell {{item.inMonth ? '' : 'dim'}} {{item.selected ? 'selected' : ''}}" wx:for="{{cells}}" wx:key="fullDate"
-          data-date="{{item.fullDate}}" data-shift="{{item.shift}}" data-inmonth="{{item.inMonth}}" bindtap="onTap" bindlongpress="onLongPress">
-      <view class="day-num">{{item.day}}</view>
-      <view class="day-shift" wx:if="{{item.shift}}" style="background: {{item.color}}">{{item.shift}}</view>
+    <view class="day-cell {{(item.inMonth || item.isBatch) ? '' : 'dim'}} {{item.selected ? 'selected' : ''}} {{item.isBatch ? 'batch-cell' : ''}}"
+          wx:for="{{cells}}" wx:key="fullDate"
+          data-date="{{item.fullDate}}" data-shift="{{item.shift}}" data-inmonth="{{item.inMonth}}" data-batch="{{item.isBatch}}"
+          bindtap="onTap" bindlongpress="onLongPress">
+      <block wx:if="{{item.isBatch}}">
+        <view class="batch-btn {{item.batchOn ? 'on' : ''}}">{{item.batchLabel}}</view>
+      </block>
+      <block wx:else>
+        <view class="day-num">{{item.day}}</view>
+        <view class="day-shift" wx:if="{{item.shift}}" style="background: {{item.color}}">{{item.shift}}</view>
+      </block>
     </view>
   </view>
 </view>

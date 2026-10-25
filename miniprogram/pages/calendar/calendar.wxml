@@ -18,8 +18,7 @@
   </view>
 
   <view class="cal-card card">
-    <calendar cells="{{cells}}" bind:selectday="onTapDay" bind:longpressday="onLongPressDay" />
-    <view class="multi-btn {{multiSelect ? 'on' : ''}}" bindtap="onToggleMulti">{{multiSelect ? '完成' : '批量'}}</view>
+    <calendar cells="{{cells}}" bind:selectday="onTapDay" bind:longpressday="onLongPressDay" bind:batch="onBatchTap" />
     <!-- 无排班且无备忘录提示 -->
     <view class="empty-tip" wx:if="{{!hasData && !memos.length}}">
       <view class="empty-text">{{emptyText}}</view>

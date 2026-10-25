@@ -100,7 +100,7 @@ Page({
       data: { year: this.data.year, month: this.data.month },
       success: (res) => {
         const r = res.result || {};
-        const cells = cal.getMonthGrid(this.data.year, this.data.month);
+        this._baseCells = cal.getMonthGrid(this.data.year, this.data.month);
         this._lastMap = r.shiftsMap || {};
         const allMembers = (r.members || []).map(function (m) {
           m.displayName = getDisplayName(m.name);
@@ -122,7 +122,7 @@ Page({
         // 立即更新 hasData，不等待备忘录加载
         this.setData({ hasData: hasData });
         this._loadMemosForMonth(hasData);
-        this.applyShifts(cells);
+        this.applyShifts();
       },
       fail: (err) => {
         console.error('loadShifts fail', err);
@@ -130,7 +130,9 @@ Page({
       }
     });
   },
-  applyShifts(cells) {
+  applyShifts() {
+    const base = this._baseCells || [];
+    const cells = base.map(function (c) { return Object.assign({}, c); });
     const myMap = this._lastMap[this.data.selectedMember] || {};
     const sel = this.data.selectedDates || [];
     cells.forEach((c) => {
@@ -141,7 +143,9 @@ Page({
       c.color = t ? getShiftColor(t) : '';
       c.selected = sel.indexOf(c.fullDate) > -1;
     });
-    this.setData({ cells });
+    // 批量按钮放进“当月最后一天”右侧的空格，与最后一排水平对齐
+    const decorated = cal.withBatchCell(cells, this.data.multiSelect ? '完成' : '批量', this.data.multiSelect);
+    this.setData({ cells: decorated });
     // 根据当前成员的实际排班数据更新图例和弹窗选项
     this.updateShiftDisplay(myMap);
   },
@@ -153,7 +157,7 @@ Page({
   onSelectMember(e) {
     const name = e.currentTarget.dataset.name;
     this.setData({ selectedMember: name });
-    this.applyShifts(this.data.cells);
+    this.applyShifts();
     const myMap = this._lastMap[name] || {};
     const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
     this.setData({ hasData: hasData });
@@ -273,13 +277,17 @@ Page({
     const i = sel.indexOf(date);
     if (i > -1) { sel.splice(i, 1); } else { sel.push(date); }
     this.setData({ selectedDates: sel });
-    this.applyShifts(this.data.cells);
+    this.applyShifts();
   },
-  // 顶栏"批量"按钮：切换多选模式
+  // 日历格内的“批量/完成”按钮（组件 batch 事件）
+  onBatchTap() {
+    this.onToggleMulti();
+  },
+  // “批量/完成”：切换多选模式
   onToggleMulti() {
     const multi = !this.data.multiSelect;
     this.setData({ multiSelect: multi, selectedDates: [] });
-    this.applyShifts(this.data.cells);
+    this.applyShifts();
     if (multi) wx.showToast({ title: '多选模式：点日期勾选，再点批量设置', icon: 'none' });
   },
   // 批量设置：为所有选中日期打开弹窗（显示该成员实际使用的班次）

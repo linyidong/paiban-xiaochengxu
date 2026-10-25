@@ -1,8 +1,8 @@
-/* 日历组件样式：使用设计 token，并带 fallback（组件样式隔离时变量可能不继承） */
+/* 日历组件样式：组件样式隔离，颜色使用与 token 一致的字面值（避免 var 继承差异） */
 .week-row { display: flex; }
 .week-cell {
   width: 14.28%; text-align: center;
-  color: var(--color-text-muted, #5F6E69);
+  color: #5F6E69;
   font-size: 26rpx; padding: 12rpx 0;
 }
 .day-grid { display: flex; flex-wrap: wrap; }
@@ -15,10 +15,34 @@
 .day-cell.selected {
   background: #ECFDF5;
   border-radius: 16rpx;
-  box-shadow: inset 0 0 0 2rpx var(--color-primary, #0F766E);
+  box-shadow: inset 0 0 0 2rpx #0F766E;
 }
-.day-num { font-size: 32rpx; color: var(--color-text, #14231F); }
+.day-num { font-size: 32rpx; color: #14231F; }
 .day-shift {
   margin-top: 6rpx; font-size: 22rpx; color: #FFFFFF;
   border-radius: 8rpx; padding: 2rpx 12rpx;
+}
+/* 批量按钮：占一个日期格，整格可点；文字与同排日期数字对齐 */
+.batch-cell {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: 6rpx;
+  box-sizing: border-box;
+}
+.batch-btn {
+  width: 100%;
+  height: 56rpx;
+  line-height: 52rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #1E40AF;
+  background: #EFF6FF;
+  border: 2rpx solid #BFDBFE;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+}
+.batch-btn.on {
+  background: #1D4ED8;
+  color: #FFFFFF;
+  border-color: #1D4ED8;
 }
