@@ -1,0 +1,15 @@
+.settings-page { padding-bottom: 40rpx; }
+.set-title { font-size: 34rpx; font-weight: 600; color: var(--color-text); margin-bottom: 12rpx; }
+.set-hint { font-size: 26rpx; color: var(--color-text-muted); line-height: 1.6; margin-bottom: 28rpx; }
+.set-field { margin-bottom: 24rpx; }
+.set-label { font-size: 28rpx; color: var(--color-text-secondary); margin-bottom: 10rpx; }
+.set-input {
+  height: 88rpx; box-sizing: border-box;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 30rpx;
+  color: var(--color-text);
+}
+.set-save { margin-top: 12rpx; }

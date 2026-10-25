@@ -9,7 +9,7 @@ const db = cloud.database();
 const _ = db.command;
 
 // ⚠️ 人工参数来源：本目录 config.json（由根目录《人工必填参数清单.json》同步），勿手改
-const { AI_VISION_API_KEY, AI_VISION_ENDPOINT, AI_VISION_MODEL, MEMBER_ALIAS, ADMIN_OPENIDS } = require('./config.json');
+const { AI_VISION_API_KEY, AI_VISION_ENDPOINT, AI_VISION_MODEL, AI_VISION_FALLBACK_MODEL, MEMBER_ALIAS, ADMIN_OPENIDS } = require('./config.json');
 
 const DAYS_IN_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
@@ -255,9 +255,34 @@ exports.main = async (event) => {
 //   - 表头行 = 日期（横排 1..31）；左列前两列 = 昵称、人员；交叉单元格 = 班次文本（休/正A/正B/售A/售B 等）
 //   - 成员名规则：优先取"昵称"列，昵称为空则取"人员"列
 //   - 班次规则：原样识别所有文本（售=晚班状态），不做白名单裁剪
+// 读取管理员在“设置”里保存的模型（settings/ai）；读取失败则回退 config 默认值
+async function getModelSettings() {
+  let primaryModel = AI_VISION_MODEL;
+  let fallbackModel = AI_VISION_FALLBACK_MODEL || '';
+  try {
+    const r = await db.collection('settings').doc('ai').get();
+    const d = r.data || {};
+    if (d.primaryModel) primaryModel = d.primaryModel;
+    if (d.fallbackModel !== undefined) fallbackModel = d.fallbackModel || '';
+  } catch (e) { /* settings 未创建/读取失败：用 config 默认 */ }
+  return { primaryModel: primaryModel, fallbackModel: fallbackModel };
+}
+
+// 模型候选：主模型优先，备用模型去重后追加
+function modelCandidates(primaryModel, fallbackModel) {
+  const list = [];
+  [primaryModel, fallbackModel].forEach(function (m) {
+    const v = String(m || '').trim();
+    if (v && list.indexOf(v) === -1) list.push(v);
+  });
+  return list;
+}
+
 async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
   // 端点/Key/模型未配置 → 直接报错（禁止回退假数据，避免污染排班）
-  if (!isVisionConfigured(AI_VISION_API_KEY, AI_VISION_ENDPOINT, AI_VISION_MODEL)) {
+  const modelCfg = await getModelSettings();
+  const candidates = modelCandidates(modelCfg.primaryModel, modelCfg.fallbackModel);
+  if (!candidates.length || !isVisionConfigured(AI_VISION_API_KEY, AI_VISION_ENDPOINT, candidates[0])) {
     throw new Error('识别服务未配置（API Key/端点/模型），请联系管理员');
   }
   // 1. 下载图片
@@ -285,8 +310,19 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
     }
   }
   const promptText = promptLines.join('');
-  // 服务过载/限流自动重试（最多3次，退避递增）
-  const content = await callVisionWithRetry(base64, promptText, 3);
+  // 服务过载/限流自动重试（最多3次，退避递增）；主模型失败后自动尝试备用模型
+  let content = '';
+  let lastErr = null;
+  for (let mi = 0; mi < candidates.length; mi++) {
+    try {
+      content = await callVisionWithRetry(base64, promptText, 3, candidates[mi]);
+      lastErr = null;
+      break;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  if (lastErr) throw new Error('主/备模型均识别失败：' + lastErr.message);
   // 3. 解析响应中的 JSON（兼容：数组 / 对象包裹数组 / 单成员对象；兼容中文引号）
   const list = parsePreview(content);
   if (!list || !list.length) throw new Error('AI 未返回可解析的 JSON：' + String(content).slice(0, 200));
@@ -430,10 +466,10 @@ function editDistance(a, b) {
 }
 
 // 带重试的视觉识别调用：服务过载/限流（429/5xx）自动退避重试，其他错误直接抛出
-async function callVisionWithRetry(imageBase64, promptText, retries) {
+async function callVisionWithRetry(imageBase64, promptText, retries, model) {
   for (let i = 1; i <= retries; i++) {
     try {
-      return await callVisionAPI(imageBase64, promptText);
+      return await callVisionAPI(imageBase64, promptText, model);
     } catch (e) {
       const msg = String(e.message || '');
       const retriable = /overload|too many|rate limit|busy|繁忙|过载|限流|429|503/i.test(msg);
@@ -445,10 +481,10 @@ async function callVisionWithRetry(imageBase64, promptText, retries) {
 }
 
 // 调用火山方舟 ark chat/completions（Node https 实现，零依赖）
-function callVisionAPI(imageBase64, promptText) {
+function callVisionAPI(imageBase64, promptText, model) {
   return new Promise(function (resolve, reject) {
     const body = JSON.stringify({
-      model: AI_VISION_MODEL,
+      model: model,
       messages: [
         {
           role: 'user',

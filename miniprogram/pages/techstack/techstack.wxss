@@ -1,0 +1,10 @@
+.tech-page { padding-bottom: 40rpx; }
+.tech-title { font-size: 34rpx; font-weight: 600; color: var(--color-text); margin-bottom: 20rpx; }
+.tech-row { padding: 18rpx 0; border-bottom: 2rpx solid var(--color-border); }
+.tech-row:last-child { border-bottom: none; }
+.tech-name { font-size: 28rpx; color: var(--color-text-secondary); margin-bottom: 6rpx; }
+.tech-value { font-size: 30rpx; color: var(--color-text); line-height: 1.6; }
+.tech-kv { display: flex; padding: 12rpx 0; font-size: 28rpx; }
+.tech-k { width: 150rpx; color: var(--color-text-muted); flex: none; }
+.tech-v { color: var(--color-text); flex: 1; }
+.tech-break { word-break: break-all; }

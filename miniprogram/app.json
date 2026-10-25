@@ -5,7 +5,9 @@
     "pages/import/import",
     "pages/members/members",
     "pages/mine/mine",
-    "pages/memo/memo"
+    "pages/memo/memo",
+    "pages/settings/settings",
+    "pages/techstack/techstack"
   ],
   "window": {
     "navigationBarBackgroundColor": "#F7F8FA",

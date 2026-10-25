@@ -1,0 +1,17 @@
+<view class="tech-page">
+  <view class="card">
+    <view class="tech-title">技术栈</view>
+    <view class="tech-row" wx:for="{{stack}}" wx:key="name">
+      <view class="tech-name">{{item.name}}</view>
+      <view class="tech-value">{{item.value}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="tech-title">AI 识别模型</view>
+    <view class="tech-kv"><text class="tech-k">主模型</text><text class="tech-v">{{primaryModel || '未配置'}}</text></view>
+    <view class="tech-kv"><text class="tech-k">备用模型</text><text class="tech-v">{{fallbackModel || '未设置'}}</text></view>
+    <view class="tech-kv"><text class="tech-k">识别端点</text><text class="tech-v tech-break">{{endpoint || '未配置'}}</text></view>
+    <view class="mine-link" bindtap="goSettings">去设置修改模型 →</view>
+  </view>
+</view>

@@ -37,8 +37,15 @@ for fn in ["login", "updateShift", "manageMember"]:
         f.write(admin_cfg)
     print("OK cloudfunctions/" + fn + "/config.json")
 
-vision_cfg = json.dumps({"AI_VISION_API_KEY": cf["AI识别API_KEY"], "AI_VISION_ENDPOINT": cf["AI识别端点"], "AI_VISION_MODEL": cf["AI识别模型"], "MEMBER_ALIAS": cf["成员别名映射"], "ADMIN_OPENIDS": cf["管理员openid白名单"]}, ensure_ascii=False, indent=2)
+vision_cfg = json.dumps({"AI_VISION_API_KEY": cf["AI识别API_KEY"], "AI_VISION_ENDPOINT": cf["AI识别端点"], "AI_VISION_MODEL": cf["AI识别模型"], "MEMBER_ALIAS": cf["成员别名映射"], "ADMIN_OPENIDS": cf["管理员openid白名单"], "AI_VISION_FALLBACK_MODEL": cf["AI识别备用模型"]}, ensure_ascii=False, indent=2)
 with open(os.path.join(root, "cloudfunctions", "importShift", "config.json"), "w", encoding="utf-8") as f:
     f.write(vision_cfg)
 print("OK cloudfunctions/importShift/config.json")
+
+settings_cfg = json.dumps({"ADMIN_OPENIDS": cf["管理员openid白名单"], "AI_VISION_MODEL": cf["AI识别模型"], "AI_VISION_FALLBACK_MODEL": cf["AI识别备用模型"], "AI_VISION_ENDPOINT": cf["AI识别端点"]}, ensure_ascii=False, indent=2)
+d = os.path.join(root, "cloudfunctions", "manageSettings")
+os.makedirs(d, exist_ok=True)
+with open(os.path.join(d, "config.json"), "w", encoding="utf-8") as f:
+    f.write(settings_cfg)
+print("OK cloudfunctions/manageSettings/config.json")
 print("分发完成：改参数后双击《同步参数.bat》，再重新部署云函数即可生效")

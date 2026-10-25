@@ -26,6 +26,8 @@
   </view>
 
   <view class="card" wx:if="{{isAdmin}}">
+    <view class="mine-link" bindtap="goSettings">设置 →</view>
+    <view class="mine-link" bindtap="goTechstack">技术栈 →</view>
     <view class="mine-link" bindtap="goMembers">成员管理 →</view>
   </view>
 

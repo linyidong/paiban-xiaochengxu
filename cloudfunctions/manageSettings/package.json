@@ -1,0 +1,9 @@
+{
+  "name": "manageSettings",
+  "version": "1.0.0",
+  "description": "管理员读取/保存 AI 模型设置（主模型 + 备用模型）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

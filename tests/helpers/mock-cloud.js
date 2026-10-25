@@ -95,6 +95,12 @@ function createDb(state) {
               if (d) Object.assign(d, payload.data);
               return { stats: { updated: d ? 1 : 0 } };
             },
+            set: async function (payload) {
+              const d = arr.find(function (x) { return x._id === id; });
+              if (d) Object.assign(d, payload.data);
+              else arr.push(Object.assign({ _id: id }, payload.data));
+              return { stats: { updated: d ? 1 : 0 } };
+            },
             remove: async function () {
               const i = arr.findIndex(function (x) { return x._id === id; });
               if (i > -1) arr.splice(i, 1);

@@ -183,3 +183,16 @@
 - 背景：31 号有班次标签时，“批量”此前顶部对齐，看起来比 31 号整格偏高。
 - 决策：批量按钮在所属日期格内 `align-items:center; justify-content:center;`，与 31 号的“日期+班次”整体居中对齐；整格仍可点。
 - 影响：仅 `components/calendar/calendar.wxss`；无数据变更。
+
+### D-017 模型设置改为管理员在线配置（主 + 备）
+
+- 日期：2026-10-25
+- 背景：用户要求管理员“我的”页增加设置与技术栈；已配置模型移到设置里，并支持备用模型，方便一步修改。
+- 决策：
+  1. 新增 `settings/ai` 文档保存 `primaryModel`、`fallbackModel`；
+  2. 新增管理员云函数 `manageSettings`（get/save），只下发模型名与端点，不下发 API Key；
+  3. `importShift` 优先读 `settings/ai`，缺失时回退 `config.json`；主模型 API 失败自动尝试备用模型；
+  4. 新增管理员页面“设置”“技术栈”，入口在“我的”；
+  5. 技术栈页只读展示前后端、数据库、AI、测试与当前模型。
+- 理由：让管理员在小程序内一步改模型，不碰配置文件；密钥仍留在云端。
+- 影响：新增集合 `settings`、云函数 `manageSettings`、两个页面；`importShift` 增加模型回退；无历史数据迁移。
