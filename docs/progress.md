@@ -5,14 +5,14 @@
 
 ## 1. 当前状态（一眼看懂）
 
-- 当前阶段：阶段 3 深度理解现状
-- 阶段状态：已完成（阶段 4 需用户确认后开始）
+- 当前阶段：阶段 4 反向恢复项目文档
+- 阶段状态：待用户确认（UI 设计决策门）
 - 当前门禁：G3 通过；G4 未通过
 - 当前任务：无
 - 任务状态：未开始
-- 下一步：用户确认「阶段 4 反向恢复文档 + UI 设计决策门」后再动笔
-- 阻塞：4 项待确认（见第 5 节），其中 Q-001/Q-002 需产品决策
-- 最近更新：2026-10-25 17:00
+- 下一步：用户回答 UI 设计决策（沿用 / 更换 / 局部更换），确认 go/no-go，再进入阶段 5 需求访谈
+- 阻塞：UI 决策未定；权限模型与导入范围待访谈；线上配置与开发者工具未授权
+- 最近更新：2026-10-25 17:20
 
 **状态行**（每次汇报第一行）：
 
@@ -28,7 +28,7 @@
 | 1 | 接管与只读安全审计 | 已完成 | `existing-project-audit.md` | 2026-10-25 |
 | 2 | CodeGraph 代码地图 | 已完成（降级） | `module-map.md` | 2026-10-25 |
 | 3 | 深度理解现状 | 已完成 | `tech-stack.md`、`setup-and-run.md`、`known-issues.md`、`人工参数与环境配置.md`、`project-brief.md`（草稿） | 2026-10-25 |
-| 4 | 反向恢复项目文档 | 未开始（待确认） | `architecture.md`、`feature-status.md`、`data-model.md`、`api-contract.md`、`ui-design.md`（现状） |  |
+| 4 | 反向恢复项目文档 | 待用户确认（UI 决策门） | `architecture.md`、`feature-status.md`、`data-model.md`、`api-contract.md`、`ui-design.md`（现状）、`project-brief.md`（定稿） | 2026-10-25 |
 | 5 | 需求访谈与 PRD | 未开始 | `项目需求文档PRD.md`、`user-flows.md` |  |
 | 6 | 目标架构与实施计划 | 未开始 | `target-architecture.md`、`implementation-plan.md`、`acceptance-test-plan.md` |  |
 | 7 | 逐任务开发 | 未开始 | `tasks/T-00X.md`、commit |  |
@@ -75,6 +75,7 @@
 - 2026-10-25：完成阶段 2。产出 `module-map.md`（入口、模块、4 条调用链、数据流、影响面、盲区）；CodeGraph 不可用已降级。
 - 2026-10-25：完成阶段 3。产出 `tech-stack.md`、`setup-and-run.md`、`known-issues.md`（20 缺陷 / 7 风险 / 8 技术债）、`人工参数与环境配置.md`、`project-brief.md` 草稿。
 - 2026-10-25：确认密钥 `AI识别API_KEY` 已进入 Git 跟踪（`HEAD`）；未打印值，待用户授权轮换与移出跟踪。
+- 2026-10-25：完成阶段 4 文档。产出 `architecture.md`、`feature-status.md`（12 保留 / 10 修复 / 4 未完成）、`data-model.md`、`api-contract.md`、`ui-design.md`（含实测对比度与字号统计）；`project-brief.md` 定稿；记录 D-004（UI 决策待定）、D-005（go/no-go 建议 go）。
 
 ## 7. 交接摘要索引
 
