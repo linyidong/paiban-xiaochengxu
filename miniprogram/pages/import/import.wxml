@@ -3,7 +3,7 @@
     <view class="import-title">排班导入</view>
     <view class="import-desc">上传排班截图 / 表格，识别后自动生成日历</view>
     <view class="import-actions">
-      <button class="btn-primary import-btn" bindtap="onChooseImage" loading="{{loading && sourceType === 'image'}}">请导入时间信息</button>
+      <button class="btn-primary import-btn" bindtap="onChooseImage" loading="{{loading && sourceType === 'image'}}">选择排班截图 / Excel</button>
     </view>
   </view>
 

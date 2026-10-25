@@ -22,7 +22,6 @@
     <view class="multi-btn {{multiSelect ? 'on' : ''}}" bindtap="onToggleMulti">{{multiSelect ? '完成' : '批量'}}</view>
     <!-- 无排班且无备忘录提示 -->
     <view class="empty-tip" wx:if="{{!hasData && !memos.length}}">
-      <view class="empty-icon"></view>
       <view class="empty-text">{{emptyText}}</view>
     </view>
     <!-- 有排班但无备忘录 -->

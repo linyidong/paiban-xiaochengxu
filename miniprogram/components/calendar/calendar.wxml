@@ -4,7 +4,7 @@
   </view>
   <view class="day-grid">
     <view class="day-cell {{item.inMonth ? '' : 'dim'}} {{item.selected ? 'selected' : ''}}" wx:for="{{cells}}" wx:key="fullDate"
-          data-date="{{item.fullDate}}" data-shift="{{item.shift}}" bindtap="onTap" bindlongpress="onLongPress">
+          data-date="{{item.fullDate}}" data-shift="{{item.shift}}" data-inmonth="{{item.inMonth}}" bindtap="onTap" bindlongpress="onLongPress">
       <view class="day-num">{{item.day}}</view>
       <view class="day-shift" wx:if="{{item.shift}}" style="background: {{item.color}}">{{item.shift}}</view>
     </view>

@@ -7,13 +7,15 @@ Component({
     onTap(e) {
       this.triggerEvent('selectday', {
         date: e.currentTarget.dataset.date,
-        shift: e.currentTarget.dataset.shift || ''
+        shift: e.currentTarget.dataset.shift || '',
+        inMonth: e.currentTarget.dataset.inmonth
       });
     },
     onLongPress(e) {
       // 长按 → 进入多选模式（由父页面处理）
       this.triggerEvent('longpressday', {
-        date: e.currentTarget.dataset.date
+        date: e.currentTarget.dataset.date,
+        inMonth: e.currentTarget.dataset.inmonth
       });
     }
   }

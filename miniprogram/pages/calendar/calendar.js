@@ -2,6 +2,7 @@
 const app = getApp();
 const cal = require('../../utils/calendar.js');
 const { getShiftColor, getShiftOptions, getDisplayName } = require('../../utils/shift.js');
+const { pickDefaultMember, selectableMembers } = require('../../utils/member.js');
 function normalizeDigits(text) {
   text = String(text).replace(/[\uff10-\uff19]/g, function (ch) {
     return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
@@ -101,29 +102,22 @@ Page({
         const r = res.result || {};
         const cells = cal.getMonthGrid(this.data.year, this.data.month);
         this._lastMap = r.shiftsMap || {};
-        const members = (r.members || []).map(function (m) {
+        const allMembers = (r.members || []).map(function (m) {
           m.displayName = getDisplayName(m.name);
           return m;
         });
+        // 日历不展示管理员记录；管理员默认进入第一个真实成员
+        const members = selectableMembers(allMembers);
         const session = wx.getStorageSync('session') || {};
-        const currentUser = members.find(function (x) { return x.name === (session.name || ''); });
-        const dbIsAdmin = currentUser && currentUser.role === 'admin';
+        const selectedMember = pickDefaultMember(members, this.data.selectedMember);
         this.setData({
           members: members,
-          isAdmin: dbIsAdmin || session.role === 'admin'
+          isAdmin: session.role === 'admin',
+          selectedMember: selectedMember
         });
-        // 检查是否有导入后需要切换到的成员
-        const importTarget = wx.getStorageSync('importTargetMember');
-        if (importTarget) {
-          wx.removeStorageSync('importTargetMember');
-          const tm = members.find(function (x) { return x.name === importTarget; });
-          if (tm) {
-            this.setData({ selectedMember: importTarget });
-          }
-        }
         // 判断当前选中成员在该月是否有排班数据
         const map = r.shiftsMap || {};
-        const myMap = map[this.data.selectedMember] || {};
+        const myMap = map[selectedMember] || {};
         const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
         // 立即更新 hasData，不等待备忘录加载
         this.setData({ hasData: hasData });
@@ -250,6 +244,11 @@ Page({
   // ---------- 日期交互：点选弹窗 / 长按多选 ----------
   onTapDay(e) {
     const date = e.detail.date;
+    // 灰色补位日期属于相邻月：不允许直接写入，避免“写了看不见”
+    if (e.detail.inMonth === false || e.detail.inMonth === 'false') {
+      wx.showToast({ title: '请先切换到该月份', icon: 'none' });
+      return;
+    }
     if (this.data.multiSelect) {
       this.toggleSelect(date);
       return;
@@ -258,6 +257,10 @@ Page({
     this.openPicker([date], date + ' 排班');
   },
   onLongPressDay(e) {
+    if (e.detail.inMonth === false || e.detail.inMonth === 'false') {
+      wx.showToast({ title: '请先切换到该月份', icon: 'none' });
+      return;
+    }
     // 长按 → 进入多选模式并选中该日期
     if (!this.data.multiSelect) {
       this.setData({ multiSelect: true, selectedDates: [] });
