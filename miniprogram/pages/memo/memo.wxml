@@ -3,10 +3,10 @@
     <view class="memo-header">
       <view class="memo-title-row">
         <view class="memo-title">{{editingId ? '修改备忘录' : '添加备忘录'}}</view>
-        <view class="memo-format-hint">格式：几月几号+备忘事件</view>
+        <view class="memo-format-hint">格式：几月几号+事件（可带年份）</view>
       </view>
     </view>
-    <textarea class="memo-input" placeholder="请输入几月几号的备忘录事件，越详细越好……" value="{{inputText}}" bindinput="onInput" auto-height maxlength="500" />
+    <textarea class="memo-input" placeholder="如：2026年10月1号 国庆值班；不写年份默认今年" value="{{inputText}}" bindinput="onInput" auto-height maxlength="500" />
     <button class="btn-primary memo-add-btn" bindtap="onAdd" disabled="{{!inputText}}">{{editingId ? '确认修改' : '添加'}}</button>
     <button class="memo-cancel-btn" wx:if="{{editingId}}" bindtap="onCancelEdit">取消修改</button>
   </view>
@@ -15,7 +15,7 @@
     <view class="memo-title">我的备忘录（{{memos.length}}）</view>
   </view>
 
-  <view wx:for="{{groupedMemos}}" wx:key="month" class="card memo-month-card">
+  <view wx:for="{{groupedMemos}}" wx:key="key" class="card memo-month-card">
     <view class="memo-month-header">{{item.label}}</view>
     <view class="memo-item" wx:for="{{item.items}}" wx:key="_id" wx:for-item="memo">
       <view class="memo-content">

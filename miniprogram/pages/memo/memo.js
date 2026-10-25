@@ -19,11 +19,17 @@ function extractDay(text) {
   var m = t.match(/月\s*(\d{1,2})\s*[号日]/);
   return m ? parseInt(m[1]) : 999;
 }
-function getMaxDays(month) {
-  // 返回某月的最大天数
+function extractYear(text) {
+  var t = normalizeText(text);
+  var m = t.match(/(20\d{2})\s*年/);
+  return m ? parseInt(m[1]) : 0;
+}
+function getMaxDays(month, year) {
+  // 返回某月的最大天数（含闰年 2 月）
   var days = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   if (month < 1 || month > 12) return 0;
-  return days[month];
+  var isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  return month === 2 && isLeap ? 29 : days[month];
 }
 Page({
   data: { memos: [], inputText: '', editingId: '', groupedMemos: [] },
@@ -54,31 +60,43 @@ Page({
     const groups = {};
     memos.forEach(function (m) {
       const month = extractMonth(m.text);
-      if (!groups[month]) groups[month] = [];
-      groups[month].push(m);
+      const year = Number(m.year) || 0;
+      const key = year + '-' + month;
+      if (!groups[key]) groups[key] = { key: key, year: year, month: month, items: [] };
+      groups[key].items.push(m);
     });
-    const months = Object.keys(groups).map(Number).sort(function (a, b) { return a - b; });
-    return months.map(function (m) {
-      const items = groups[m].sort(function (a, b) { return extractDay(a.text) - extractDay(b.text); });
-      return { month: m, label: m === 0 ? '其他' : m + '月份', items: items };
-    });
+    return Object.keys(groups).map(function (k) { return groups[k]; })
+      .sort(function (a, b) { return (a.year - b.year) || (a.month - b.month); })
+      .map(function (g) {
+        const items = g.items.sort(function (a, b) { return extractDay(a.text) - extractDay(b.text); });
+        let label = '其他';
+        if (g.year && g.month) label = g.year + '年' + g.month + '月';
+        else if (g.month) label = g.month + '月';
+        return { key: g.key, year: g.year, month: g.month, label: label, items: items };
+      });
   },
   onInput(e) { this.setData({ inputText: e.detail.value }); },
   onAdd() {
     const raw = (this.data.inputText || '').trim();
     if (!raw) { wx.showToast({ title: '请输入内容', icon: 'none' }); return; }
     const text = normalizeText(raw);
-    // 检查格式：必须以"几月几号"或"几月几日"开头
-    var match = text.match(/^[\d０-９]{1,2}\s*月\s*[\d０-９]{1,2}\s*[号日]/);
+    // 格式：可带年份（2026年10月1号…），也可只写“10月1号…”
+    var match = text.match(/^(?:20\d{2}\s*年\s*)?[\d０-９]{1,2}\s*月\s*[\d０-９]{1,2}\s*[号日]/);
     if (!match) {
       this.setData({ inputText: '' });
-      wx.showToast({ title: '输入的格式不对，示例：10月1号国庆节放假回家', icon: 'none', duration: 2000 });
+      wx.showToast({ title: '格式不对，示例：2026年10月1号国庆节放假', icon: 'none', duration: 2000 });
       return;
     }
-    // 提取月份和日期，验证日期是否合法
+    // 提取年/月/日，验证日期是否合法（含闰年）
     var month = extractMonth(text);
     var day = extractDay(text);
-    var maxDays = getMaxDays(month);
+    var year = extractYear(text) || new Date().getFullYear();
+    if (year < 2000 || year > 2100) {
+      this.setData({ inputText: '' });
+      wx.showToast({ title: '年份不对，请输入 2000-2100 年', icon: 'none', duration: 2000 });
+      return;
+    }
+    var maxDays = getMaxDays(month, year);
     if (month < 1 || month > 12) {
       this.setData({ inputText: '' });
       wx.showToast({ title: '月份不对，请输入1-12月', icon: 'none', duration: 2000 });
@@ -86,7 +104,7 @@ Page({
     }
     if (day < 1 || day > maxDays) {
       this.setData({ inputText: '' });
-      wx.showToast({ title: month + '月没有' + day + '号，请检查日期', icon: 'none', duration: 2000 });
+      wx.showToast({ title: year + '年' + month + '月没有' + day + '号，请检查日期', icon: 'none', duration: 2000 });
       return;
     }
     const session = wx.getStorageSync('session');

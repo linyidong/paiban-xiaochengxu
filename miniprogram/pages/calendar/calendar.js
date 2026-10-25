@@ -186,7 +186,7 @@ Page({
         var mr = memoRes.result || {};
         var allMemos = mr.memos || [];
         var memos = allMemos.filter(function (m) {
-          return extractMonth(m.text) === currentMonth;
+          return Number(m.year) === Number(self.data.year) && extractMonth(m.text) === currentMonth;
         }).sort(function (a, b) { return extractDay(a.text) - extractDay(b.text); });
         var emptyText = '';
         if (!hasData && !memos.length) {
