@@ -53,10 +53,13 @@ function createDb(state) {
     serverDate: function () { return new Date(); },
     collection: function (name) {
       const arr = state[name] || (state[name] = []);
-      function query(cond) {
+      function query(cond, offset, lim) {
+        const skipN = offset || 0;
+        const limitN = (lim == null ? Infinity : lim);
+        function matched() { return arr.filter(function (d) { return match(d, cond); }); }
         return {
-          get: async function () { return { data: arr.filter(function (d) { return match(d, cond); }) }; },
-          count: async function () { return { total: arr.filter(function (d) { return match(d, cond); }).length }; },
+          get: async function () { return { data: matched().slice(skipN, skipN + limitN) }; },
+          count: async function () { return { total: matched().length }; },
           remove: async function () {
             const keep = arr.filter(function (d) { return !match(d, cond); });
             const removed = arr.length - keep.length;
@@ -64,15 +67,17 @@ function createDb(state) {
             keep.forEach(function (d) { arr.push(d); });
             return { stats: { removed: removed } };
           },
-          orderBy: function () { return query(cond); },
-          limit: function () { return query(cond); }
+          orderBy: function () { return query(cond, skipN, limitN); },
+          limit: function (n) { return query(cond, skipN, n); },
+          skip: function (n) { return query(cond, n, limitN); }
         };
       }
       return {
-        where: query,
+        where: function (cond) { return query(cond); },
         get: async function () { return { data: arr.slice() }; },
         orderBy: function () { return query({}); },
-        limit: function () { return query({}); },
+        limit: function (n) { return query({}, 0, n); },
+        skip: function (n) { return query({}, n, Infinity); },
         add: async function (payload) {
           const d = Object.assign({ _id: 'x' + (++state.seq) }, payload.data);
           arr.push(d);

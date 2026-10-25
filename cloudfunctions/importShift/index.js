@@ -32,6 +32,11 @@ function isValidDate(s) {
   return max > 0 && d >= 1 && d <= max;
 }
 
+// 视觉识别是否已配置（缺 Key/端点/模型时必须报错，禁止回退假数据）
+function isVisionConfigured(apiKey, endpoint, model) {
+  return !!(apiKey && model && endpoint && endpoint.indexOf('your-') === -1);
+}
+
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext();
   if (!OPENID) return { ok: false, msg: '未登录' };
@@ -94,6 +99,7 @@ exports.main = async (event) => {
   const eventYear = parseInt(event.year, 10) || 0;
   const eventMonth = parseInt(event.month, 10) || 0;
   if (!preview || !preview.length) return { ok: false, msg: '预览为空' };
+  if (preview.length > 100) return { ok: false, msg: '一次最多导入 100 位成员' };
   const usersRes = await db.collection('users').limit(100).get();
   // 软删除成员不参与匹配/自动登记；同名已删除成员必须由管理员先恢复
   const activeUsers = usersRes.data.filter(function (u) { return !u.isDeleted; });
@@ -248,9 +254,9 @@ exports.main = async (event) => {
 //   - 成员名规则：优先取"昵称"列，昵称为空则取"人员"列
 //   - 班次规则：原样识别所有文本（售=晚班状态），不做白名单裁剪
 async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
-  // 端点/Key/模型未配置 → 回退模拟数据，保证流程可跑通（配置见 config.json）
-  if (!AI_VISION_ENDPOINT || AI_VISION_ENDPOINT.indexOf('your-') > -1 || !AI_VISION_API_KEY || !AI_VISION_MODEL) {
-    return mockPreview();
+  // 端点/Key/模型未配置 → 直接报错（禁止回退假数据，避免污染排班）
+  if (!isVisionConfigured(AI_VISION_API_KEY, AI_VISION_ENDPOINT, AI_VISION_MODEL)) {
+    throw new Error('识别服务未配置（API Key/端点/模型），请联系管理员');
   }
   // 1. 下载图片
   const down = await cloud.downloadFile({ fileID });
@@ -593,3 +599,4 @@ async function parseExcel(fileID) {
 
 // 暴露纯函数给单元测试（不影响云函数入口）
 exports._parseSheetRows = parseSheetRows;
+exports._isVisionConfigured = isVisionConfigured;

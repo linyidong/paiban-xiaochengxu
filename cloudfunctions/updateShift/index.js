@@ -38,6 +38,7 @@ exports.main = async (event) => {
   const dateList = [];
   rawList.forEach(function (d) { if (dateList.indexOf(d) === -1) dateList.push(d); });
   if (!name || !dateList.length) return { ok: false, msg: '参数不完整' };
+  if (dateList.length > 62) return { ok: false, msg: '一次最多设置 62 天' };
 
   // 先整体校验日期：只要有一个非法就整批拒绝，避免部分写入
   const badDates = dateList.filter(function (d) { return !isValidDate(d); });
