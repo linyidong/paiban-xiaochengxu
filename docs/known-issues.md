@@ -20,13 +20,13 @@
 | BUG-011 | 管理员默认进入“管理员”伪成员，空数据 | 管理员首次登录 → 日历默认选中“管理员” | `login/index.js:28`（自动建档 name=管理员）；`calendar.js:73`（默认 `session.name`） | 管理员体验 | 中 | 待修 |
 | BUG-012 | 月选择器当前月有数据时，白字浅灰底不可读 | 打开年月选择器且当前月有排班 | `calendar.wxss:122-127`：`.month-cell.current` 与 `.month-cell.has-data` 同权重，后者在后覆盖背景 | 视觉/可读性 | 中 | 待修 |
 | BUG-013 | “白班/晚班”硬编码与 11 种班次配置不一致 | 选中管理员行或查看默认图例 → 显示 休/白班/晚班/年假/取消 | `calendar.js:5-6`（`DEFAULT_SHIFTS`）vs `miniprogram/config.js:5-17`（11 种）；`calendar.js:4` 引入 `SHIFT_TYPES` 但全文未使用 | 班次体系一致性 | 中 | 已修（T-005，待部署） |
-| BUG-014 | Excel 导入不可用 | 导入页无 Excel 入口；即使调用 `sourceType:'excel'` 也返回空 | `importShift/index.js:364-371`（`parseExcel` 空实现）；`import.js:54`（只允许图片） | 与文档承诺不符 | 中 | 待修/待定 |
-| BUG-015 | 无“整表导入（全部）” | 多人识别后只能单选一人导入 | `import.js:124-139`、`:160-173` | 多成员导入效率/费用 | 中 | 待修/待定 |
+| BUG-014 | Excel 导入不可用 | 导入页无 Excel 入口；即使调用 `sourceType:'excel'` 也返回空 | `importShift/index.js:364-371`（`parseExcel` 空实现）；`import.js:54`（只允许图片） | 与文档承诺不符 | 中 | 已修（T-008，待真实样例验证） |
+| BUG-015 | 无“整表导入（全部）” | 多人识别后只能单选一人导入 | `import.js:124-139`、`:160-173` | 多成员导入效率/费用 | 中 | 已修（T-009，待部署） |
 | BUG-016 | 成员管理页无“新增成员”入口 | 后端 `add` 存在，前端只有解绑/移除 | `manageMember/index.js:78-87` 无 UI 调用 | 管理员能力缺失 | 低 | 已修（T-007，待部署） |
 | BUG-017 | 成员页展示完整 openid；`list` 向所有人返回 openid | 任意成员调用 `manageMember.list` 即得全量 openid | `manageMember/index.js:28-35`、`members.wxml:13-16` | 隐私 | 低 | 待修 |
 | BUG-018 | 批量按钮绝对定位可能遮挡日历 | 小屏机型查看日历 | `calendar.wxss:27-32`（`top:480rpx` 固定值） | 视觉 | 低 | 待修（待真机确认） |
-| BUG-019 | 排班查询静默截断 | 成员数 × 天数 > 1000 时，部分排班不显示；年度高亮 > 2000 时不全 | `getShifts/index.js:45`（`limit(1000)`）、`:23`（`limit(2000)`） | 大数据量正确性 | 高（容量） | 待修（T-010） |
-| BUG-020 | 配置缺失时导入返回假数据 | 未配置 Key/端点 → 导入显示“识别成功”并写入 mock 排班 | `importShift/index.js:130-132`、`:354-362` | 生产数据污染 | 中 | 待修 |
+| BUG-019 | 排班查询静默截断 | 成员数 × 天数 > 1000 时，部分排班不显示；年度高亮 > 2000 时不全 | `getShifts/index.js:45`（`limit(1000)`）、`:23`（`limit(2000)`） | 大数据量正确性 | 高（容量） | 已修（T-010 分页，待线上复测） |
+| BUG-020 | 配置缺失时导入返回假数据 | 未配置 Key/端点 → 导入显示“识别成功”并写入 mock 排班 | `importShift/index.js:130-132`、`:354-362` | 生产数据污染 | 中 | 已修（T-010 返回失败，待部署） |
 | BUG-021 | 班次标签红/蓝底白字对比度不足 | 查看“休”“正A”等标签 | `calendar.wxss` 班次标签用 `background:<班次色>` + 白字；WCAG：白字 on `#EF4444` = 3.76:1、on `#3B82F6` = 3.68:1 | 可读性 | 中 | 待修 |
 | BUG-022 | 正文主体字号 12–14px，低于 16px | 任意页面 | 8 个 WXSS 中 `28rpx`（14px）25 处、`26rpx` 15 处、`24rpx` 12 处 | 可读性/无障碍 | 中 | 待修 |
 | BUG-023 | `shifts.updatedBy` 类型不一致 | 用日历改一天，再用导入写同一天 | `updateShift/index.js:35` 写 `users._id`；`importShift/index.js:105` 写 `OPENID` | 审计字段不可用 | 低 | 待修 |
