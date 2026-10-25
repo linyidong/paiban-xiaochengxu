@@ -1,5 +1,6 @@
 // 成员管理页（仅管理员可见入口；云函数二次校验）
 const { getDisplayName } = require('../../utils/shift.js');
+const { selectableMembers } = require('../../utils/member.js');
 Page({
   data: { members: [], showAdd: false, newName: '', adding: false },
   onShow() {
@@ -19,7 +20,8 @@ Page({
       success: (res) => {
         const r = res.result || {};
         if (r.members) {
-          const members = r.members.map(function (m) {
+          // 客户端也过滤管理员伪成员；后端部署后双重保证
+          const members = selectableMembers(r.members).map(function (m) {
             m.displayName = getDisplayName(m.name);
             return m;
           });

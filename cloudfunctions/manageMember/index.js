@@ -33,7 +33,7 @@ exports.main = async (event) => {
     const admin = await checkAdmin(OPENID);
     return {
       ok: true,
-      members: res.data.filter(function (u) { return !u.isDeleted; }).map(function (u) {
+      members: res.data.filter(function (u) { return !u.isDeleted && u.role !== 'admin'; }).map(function (u) {
         const item = {
           _id: u._id,
           name: u.name,
@@ -60,6 +60,7 @@ exports.main = async (event) => {
       return { ok: false, msg: '成员不存在' };
     }
     const doc = active[0];
+    if (doc.role === 'admin') return { ok: false, msg: '管理员账号不能绑定' };
     if (doc.openid && doc.openid !== OPENID) return { ok: false, msg: '该成员已被其他用户绑定，请联系管理员解绑' };
     await db.collection('users').doc(doc._id).update({
       data: { openid: OPENID, role: doc.role || 'member' }
@@ -79,6 +80,8 @@ exports.main = async (event) => {
     if (dup.data.length) {
       const deleted = dup.data.filter(function (u) { return u.isDeleted; });
       if (deleted.length) return { ok: false, msg: '该昵称已存在（可能已删除），请联系管理员' };
+      const adminDup = dup.data.filter(function (u) { return u.role === 'admin'; });
+      if (adminDup.length) return { ok: false, msg: '管理员账号不能绑定' };
       if (!dup.data[0].openid || dup.data[0].openid === OPENID) {
         await db.collection('users').doc(dup.data[0]._id).update({
           data: { openid: OPENID, role: dup.data[0].role || 'member' }

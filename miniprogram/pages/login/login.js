@@ -1,6 +1,7 @@
 // 登录页：微信授权 → 云函数 login → 存 session（新用户需绑定成员）
 const app = getApp();
 const { getDisplayName } = require('../../utils/shift.js');
+const { selectableMembers } = require('../../utils/member.js');
 Page({
   data: {
     loading: false,
@@ -78,7 +79,7 @@ Page({
           let myBoundName = '';
           let myBoundDisplayName = '';
           const list = [];
-          r.members.forEach(function (m) {
+          selectableMembers(r.members).forEach(function (m) {
             if (!m.name) return;
             // openid 已不再下发；用 isSelf / isBound 判断
             if (m.isSelf) {

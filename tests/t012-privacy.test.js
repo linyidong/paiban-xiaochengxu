@@ -17,8 +17,8 @@ test('管理员 list 返回 openid', async function () {
   const ctx = setup('o-admin');
   const r = await ctx.main({ action: 'list' });
   assert.strictEqual(r.ok, true);
-  const me = r.members.find(function (m) { return m.name === '管理员'; });
-  assert.strictEqual(me.openid, 'o-admin');
+  const member = r.members.find(function (m) { return m.name === '甲'; });
+  assert.strictEqual(member.openid, 'o-member-1');
 });
 
 test('普通成员 list 不含 openid 字段', async function () {
