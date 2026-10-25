@@ -5,14 +5,14 @@
 
 ## 1. 当前状态（一眼看懂）
 
-- 当前阶段：阶段 5 需求访谈与 PRD
-- 阶段状态：完成产出，待用户确认（G4）
-- 当前门禁：G3 通过；G4 待通过（等用户确认 PRD 范围与验收标准）
+- 当前阶段：阶段 6 目标架构与实施计划
+- 阶段状态：待用户确认（G5）
+- 当前门禁：G4 通过；G5 待通过（需用户批准架构/计划/验收，且独立理解报告核对完成）
 - 当前任务：无
 - 任务状态：未开始
-- 下一步：用户确认 PRD 范围（P0/P1/P2 与“不做”清单）
-- 阻塞：线上配置/数据与开发者工具授权仍未提供（Q-006/Q-010）
-- 最近更新：2026-10-25 18:05
+- 下一步：核对独立只读理解报告，然后请用户批准 G5
+- 阻塞：线上配置/数据（Q-006）、开发者工具登录（Q-010）
+- 最近更新：2026-10-25 18:30
 
 **状态行**（每次汇报第一行）：
 
@@ -29,8 +29,8 @@
 | 2 | CodeGraph 代码地图 | 已完成（降级） | `module-map.md` | 2026-10-25 |
 | 3 | 深度理解现状 | 已完成 | `tech-stack.md`、`setup-and-run.md`、`known-issues.md`、`人工参数与环境配置.md`、`project-brief.md`（草稿） | 2026-10-25 |
 | 4 | 反向恢复项目文档 | 已完成（UI 决策 B） | `architecture.md`、`feature-status.md`、`data-model.md`、`api-contract.md`、`ui-design.md`（现状）、`project-brief.md`（定稿） | 2026-10-25 |
-| 5 | 需求访谈与 PRD | 待用户确认（G4） | `项目需求文档PRD.md`、`user-flows.md`、`ui-design.md`（目标）、`feature-status.md`（范围） | 2026-10-25 |
-| 6 | 目标架构与实施计划 | 未开始 | `target-architecture.md`、`implementation-plan.md`、`acceptance-test-plan.md` |  |
+| 5 | 需求访谈与 PRD | 已完成（G4 通过） | `项目需求文档PRD.md`、`user-flows.md`、`ui-design.md`（目标）、`feature-status.md`（范围） | 2026-10-25 |
+| 6 | 目标架构与实施计划 | 待用户确认（G5） | `target-architecture.md`、`implementation-plan.md`（16 任务）、`acceptance-test-plan.md`（30 用例） | 2026-10-25 |
 | 7 | 逐任务开发 | 未开始 | `tasks/T-00X.md`、commit |  |
 | 8 | 验收、部署与上线 | 未开始 | 验收结果、`deployment.md` |  |
 | 9 | 运营维护与下一轮 | 未开始 | `operations.md` |  |
