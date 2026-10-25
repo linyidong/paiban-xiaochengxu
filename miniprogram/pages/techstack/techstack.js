@@ -11,8 +11,8 @@ Page({
       { name: '数据', value: '云数据库 users / shifts / memos / changeLog / settings' },
       { name: 'AI 识别', value: '火山方舟 Ark · Chat Completions（主/备模型自动切换）' },
       { name: '图片识别', value: 'Base64 视觉调用，单次 60s 超时，失败自动重试' },
-      { name: '测试', value: 'Node.js 内置 node:test（104 条）' },
-      { name: '当前版本', value: '体验版 1.1.2（以小程序后台版本管理为准）' }
+      { name: '测试', value: 'Node.js 内置 node:test（109 条）' },
+      { name: '当前版本', value: '体验版 1.2.0（以小程序后台版本管理为准）' }
     ]
   },
   onShow() {
