@@ -8,6 +8,21 @@
   border-radius: 32rpx; margin-right: 16rpx; font-size: 26rpx; color: #4B5563;
 }
 .member-item.active { background: #3B82F6; color: #FFFFFF; }
+
+/* 非管理员当前成员显示 */
+.member-current {
+  padding: 16rpx 24rpx;
+  text-align: center;
+}
+.member-current-label {
+  font-size: 26rpx;
+  color: #6B7280;
+}
+.member-current-name {
+  font-size: 28rpx;
+  color: #3B82F6;
+  font-weight: 600;
+}
 .cal-card { padding-bottom: 16rpx; position: relative; }
 .multi-btn {
   position: absolute; right: 16rpx;
@@ -17,16 +32,13 @@
 }
 .multi-btn.on { background: #3B82F6; color: #FFFFFF; }
 .legend { display: flex; flex-direction: column; }
-.legend-row { display: flex; align-items: center; justify-content: space-between; }
+.legend-row { display: flex; align-items: center; justify-content: space-between; margin: 16rpx 0; }
 .legend-item { display: flex; align-items: center; font-size: 26rpx; color: #4B5563; }
 .dot { width: 20rpx; height: 20rpx; border-radius: 50%; margin-right: 8rpx; }
-.legend-actions { display: flex; flex-direction: column; gap: 16rpx; margin-top: 200rpx; }
+.legend-actions { display: flex; flex-direction: column; gap: 16rpx; margin-top: 24rpx; }
 .legend-act-btn {
   text-align: center; font-size: 28rpx; padding: 18rpx 0;
   border-radius: 12rpx;
-}
-.legend-act-refresh {
-  color: #3B82F6; border: 2rpx solid #DBEAFE; background: #EFF6FF;
 }
 .legend-act-delete {
   color: #EF4444; font-size: 32rpx; font-weight: 600;
@@ -125,4 +137,26 @@
 }
 .empty-text {
   font-size: 28rpx; color: #9CA3AF;
+}
+
+/* 有排班但无备忘录提示 */
+.memo-empty-tip {
+  text-align: center;
+  padding: 32rpx 0 16rpx;
+}
+
+/* 备忘录区域 */
+.memo-section {
+  padding: 24rpx 0 8rpx;
+  border-top: 1rpx solid #F3F4F6;
+  margin-top: 16rpx;
+}
+.memo-section-title {
+  font-size: 28rpx; color: #6B7280; margin-bottom: 16rpx;
+}
+.memo-item {
+  padding: 12rpx 0;
+}
+.memo-text {
+  font-size: 32rpx; font-weight: 600; color: #374151; line-height: 1.6;
 }

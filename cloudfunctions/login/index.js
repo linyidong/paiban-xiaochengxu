@@ -17,21 +17,60 @@ exports.main = async () => {
 
   const res = await users.where({ openid: OPENID }).get();
   let role = inWhitelist ? 'admin' : 'member';
-  let name = '新成员';
+  let name = '';
   let needBind = false;
+
   if (res.data.length === 0) {
-    // 新用户：先按"新成员"建档，需要绑定昵称
-    await users.add({
-      data: { openid: OPENID, name: name, wxId: '', role: role, createdAt: db.serverDate() }
-    });
-    needBind = true;
-  } else {
-    name = res.data[0].name || name;
-    // 白名单优先；不匹配时回退数据库已有角色（防止因 openid 细微差异导致管理员被降级）
+    // 无记录
+    if (inWhitelist) {
+      // 管理员：自动建档
+      await users.add({
+        data: { openid: OPENID, name: '管理员', wxId: '', role: 'admin', createdAt: db.serverDate() }
+      });
+      name = '管理员';
+      role = 'admin';
+    } else {
+      // 非管理员：不建档，要求绑定成员
+      needBind = true;
+    }
+  } else if (res.data.length === 1) {
+    name = res.data[0].name || '';
+    // 白名单优先；不匹配时回退数据库已有角色
     if (!inWhitelist && res.data[0].role === 'admin') role = 'admin';
     await users.doc(res.data[0]._id).update({ data: { role: role } });
-    // 如果名字仍是"新成员"，说明还没绑定昵称
-    if (name === '新成员') needBind = true;
+    // 名字为空或"新成员"说明还没绑定
+    if (!name || name === '新成员') {
+      needBind = true;
+      name = '';
+    }
+  } else {
+    // 同一 openid 绑定了多个成员 → 合并：保留有排班数据的那个，其余解绑
+    const shifts = db.collection('shifts');
+    let keepId = res.data[0]._id;
+    let keepName = res.data[0].name || '';
+    // 找有排班数据的成员
+    for (const u of res.data) {
+      const sRes = await shifts.where({ userId: u._id }).count();
+      if (sRes.total > 0) {
+        keepId = u._id;
+        keepName = u.name || '';
+        break;
+      }
+    }
+    // 解绑其他成员
+    for (const u of res.data) {
+      if (u._id !== keepId) {
+        await users.doc(u._id).update({ data: { openid: '' } });
+      }
+    }
+    // 更新保留的成员角色
+    if (!inWhitelist && res.data[0].role === 'admin') role = 'admin';
+    await users.doc(keepId).update({ data: { role: role } });
+    name = keepName;
+    if (!name || name === '新成员') {
+      needBind = true;
+      name = '';
+    }
   }
   return {
     ok: true,

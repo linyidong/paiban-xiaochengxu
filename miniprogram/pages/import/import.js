@@ -1,4 +1,5 @@
 // 排班导入页：上传截图/表格 → 识别 → 单人自动导入 / 多人询问选谁 → 预览校对 → 确认入库
+const { getDisplayName } = require('../../utils/shift.js');
 Page({
   data: {
     preview: null,  // [{name, rows:[{date, shift}]}]
@@ -8,18 +9,31 @@ Page({
     // 多人选择
     showMemberSelect: false,
     recognizedMembers: [],  // 识别到的成员列表 [{name}]
-    fullPreview: null       // 首次识别的完整结果（用于本地过滤，避免重复调用 AI）
+    fullPreview: null,       // 首次识别的完整结果（用于本地过滤，避免重复调用 AI）
+    // 非管理员强制绑定
+    isAdmin: false,
+    boundMemberName: '',
+    boundMemberDisplayName: '',
+    // 非管理员绑定确认弹窗
+    showBindConfirm: false,
+    bindConfirmRecognizedName: '',
+    bindConfirmRecognizedDisplayName: ''
   },
   onShow() {
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) wx.reLaunch({ url: '/pages/login/login' });
+    const isAdmin = session.role === 'admin';
+    const boundMemberName = session.name || '';
+    const boundMemberDisplayName = getDisplayName(boundMemberName);
+    this.setData({ isAdmin: isAdmin, boundMemberName: boundMemberName, boundMemberDisplayName: boundMemberDisplayName });
   },
   onChooseImage() {
     if (this.data.loading) return;
     wx.showActionSheet({
-      itemList: ['从相册选择', '从聊天记录选择'],
+      itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择'],
       success: (res) => {
         if (res.tapIndex === 0) this.chooseFromAlbum();
+        else if (res.tapIndex === 1) this.chooseFromChatImage();
         else this.chooseFromChat();
       }
     });
@@ -51,20 +65,25 @@ Page({
       }
     });
   },
-  onChooseExcel() {
-    if (this.data.loading) return;
+  // 从微信聊天里直接选图片（type: 'image' 可获取聊天中直接发送的图片）
+  chooseFromChatImage() {
     wx.chooseMessageFile({
       count: 1,
-      type: 'file',
-      extension: ['xlsx', 'xls', 'csv'],
+      type: 'image',
       success: (res) => {
         const f = res.tempFiles[0];
-        if (f.size > 10 * 1024 * 1024) { wx.showToast({ title: '文件过大（限10MB）', icon: 'none' }); return; }
-        this.uploadAndRecognize(f.path, 'excel');
+        if (f.size > 10 * 1024 * 1024) { wx.showToast({ title: '图片过大（限10MB）', icon: 'none' }); return; }
+        wx.compressImage({
+          src: f.path,
+          quality: 70,
+          compressedWidth: 1000,
+          success: (c) => { this.uploadAndRecognize(c.tempFilePath, 'image'); },
+          fail: () => { this.uploadAndRecognize(f.path, 'image'); }
+        });
       }
     });
   },
-  // 上传并识别（不传 targetName，识别所有人）
+  // 上传并识别（始终识别所有人，不传 targetName）
   uploadAndRecognize(filePath, type) {
     this.setData({ loading: true, sourceType: type });
     let ext = '.xlsx';
@@ -81,12 +100,27 @@ Page({
       success: (up) => {
         wx.cloud.callFunction({
           name: 'importShift',
-          data: { fileID: up.fileID, sourceType: type },
+          data: { fileID: up.fileID, sourceType: type, targetName: '' },
           success: (res) => {
             const r = res.result || {};
             if (r.ok && r.preview && r.preview.length) {
-              const fullPreview = r.preview;
-              const members = fullPreview.map(function (p) { return { name: p.name }; });
+              // 为每个成员添加 displayName
+              const fullPreview = r.preview.map(function (p) {
+                p.displayName = getDisplayName(p.name);
+                return p;
+              });
+              const members = fullPreview.map(function (p) { return { name: p.name, displayName: p.displayName }; });
+              // 非管理员且有已绑定成员 → 弹出绑定确认
+              if (!this.data.isAdmin && this.data.boundMemberName && members.length === 1) {
+                const recognized = members[0];
+                this.setData({
+                  fullPreview: fullPreview,
+                  showBindConfirm: true,
+                  bindConfirmRecognizedName: recognized.name,
+                  bindConfirmRecognizedDisplayName: recognized.displayName
+                });
+                return;
+              }
               if (members.length === 1) {
                 // 只有一人 → 直接显示该人预览
                 this.setData({
@@ -141,6 +175,42 @@ Page({
   onCancelSelect() {
     this.setData({ showMemberSelect: false, recognizedMembers: [], fullPreview: null });
   },
+  // 非管理员绑定确认：确定 → 把识别到的成员替换为已绑定成员名，直接显示预览
+  onConfirmBindRecognized() {
+    const boundName = this.data.boundMemberName;
+    const fullPreview = this.data.fullPreview;
+    // 把识别到的成员名替换为用户已绑定的成员名
+    const adjustedPreview = fullPreview.map(function (p) {
+      return { name: boundName, displayName: getDisplayName(boundName), rows: p.rows };
+    });
+    this.setData({
+      showBindConfirm: false,
+      bindConfirmRecognizedName: '',
+      bindConfirmRecognizedDisplayName: '',
+      preview: adjustedPreview,
+      fullPreview: adjustedPreview,
+      targetName: boundName
+    });
+    wx.showToast({ title: '已绑定到「' + getDisplayName(boundName) + '」', icon: 'success' });
+    setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
+  },
+  // 非管理员绑定确认：取消 → 显示完整预览，让用户自行决定
+  onCancelBindConfirm() {
+    const fullPreview = this.data.fullPreview;
+    const members = fullPreview.map(function (p) { return { name: p.name, displayName: p.displayName }; });
+    this.setData({
+      showBindConfirm: false,
+      bindConfirmRecognizedName: '',
+      bindConfirmRecognizedDisplayName: '',
+      fullPreview: null
+    });
+    if (members.length === 1) {
+      this.setData({ preview: fullPreview, targetName: members[0].name });
+      setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
+    } else {
+      this.setData({ showMemberSelect: true, recognizedMembers: members, fullPreview: fullPreview });
+    }
+  },
   // 人工校对：点按循环切换班次（按班次列表顺序循环，如 休→正A→正B→售A→售B→休）
   onFixShift(e) {
     const { idx, date } = e.currentTarget.dataset;
@@ -174,6 +244,9 @@ Page({
             if (r2.ok) {
               wx.showToast({ title: '导入成功', icon: 'success' });
               this.setData({ preview: null, targetName: '' });
+              // 告诉日历页切换到导入的成员
+              let switchTo = targetName && targetName !== '全部' ? targetName : (preview[0] && preview[0].name || '');
+              if (switchTo) wx.setStorageSync('importTargetMember', switchTo);
               setTimeout(function () { wx.switchTab({ url: '/pages/calendar/calendar' }); }, 600);
             } else {
               wx.showToast({ title: r2.msg || '导入失败', icon: 'none' });

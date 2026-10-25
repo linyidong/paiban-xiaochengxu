@@ -1,4 +1,0 @@
-.tag {
-  display: inline-block; color: #FFFFFF; font-size: 20rpx;
-  border-radius: 8rpx; padding: 2rpx 14rpx;
-}

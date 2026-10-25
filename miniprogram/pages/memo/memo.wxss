@@ -1,0 +1,44 @@
+.memo-page { padding-bottom: 40rpx; }
+.memo-header {
+  margin-bottom: 24rpx;
+}
+.memo-title-row {
+  display: flex; align-items: center; gap: 16rpx;
+}
+.memo-title { font-size: 32rpx; font-weight: 600; }
+.memo-format-hint {
+  font-size: 24rpx; color: #9CA3AF;
+}
+.memo-input {
+  background: #F9FAFB; border-radius: 16rpx; padding: 20rpx 24rpx;
+  font-size: 28rpx; min-height: 160rpx; box-sizing: border-box;
+  width: 100%;
+}
+.memo-add-btn { margin-top: 32rpx; }
+.memo-cancel-btn {
+  margin-top: 16rpx; background: #F3F4F6; color: #6B7280;
+  border-radius: 16rpx; font-size: 28rpx;
+}
+.memo-list-header {
+  padding: 16rpx 24rpx;
+}
+.memo-month-card {
+  margin-top: 24rpx;
+}
+.memo-month-header {
+  font-size: 26rpx; color: #6B7280; font-weight: 600;
+  padding: 0 0 12rpx; border-bottom: 2rpx solid #E5E7EB;
+  margin-bottom: 8rpx;
+}
+.memo-item {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20rpx 0; border-bottom: 2rpx solid #F3F4F6;
+}
+.memo-item:last-child { border-bottom: none; }
+.memo-content { flex: 1; }
+.memo-text { font-size: 32rpx; font-weight: 600; color: #374151; line-height: 1.6; }
+.memo-time { font-size: 22rpx; color: #9CA3AF; margin-top: 8rpx; }
+.memo-actions { display: flex; gap: 16rpx; flex-shrink: 0; }
+.memo-edit { color: #3B82F6; font-size: 24rpx; padding: 8rpx 16rpx; }
+.memo-delete { color: #EF4444; font-size: 24rpx; padding: 8rpx 16rpx; }
+.memo-empty { text-align: center; color: #9CA3AF; font-size: 26rpx; padding: 40rpx 0; }

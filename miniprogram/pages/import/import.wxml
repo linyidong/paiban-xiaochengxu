@@ -3,7 +3,7 @@
     <view class="import-title">排班导入</view>
     <view class="import-desc">上传排班截图 / 表格，识别后自动生成日历</view>
     <view class="import-actions">
-      <button class="btn-primary import-btn" bindtap="onChooseImage" loading="{{loading && sourceType === 'image'}}">选择排班截图（jpg/png/jfif 等）</button>
+      <button class="btn-primary import-btn" bindtap="onChooseImage" loading="{{loading && sourceType === 'image'}}">请导入时间信息</button>
     </view>
   </view>
 
@@ -13,16 +13,35 @@
     <view class="member-select-title">识别到 {{recognizedMembers.length}} 位成员，请选择要导入谁的排班</view>
     <view class="member-select-list">
       <view class="member-select-item" wx:for="{{recognizedMembers}}" wx:key="name"
-            data-name="{{item.name}}" bindtap="onSelectMember">{{item.name}}</view>
+            data-name="{{item.name}}" bindtap="onSelectMember">
+        {{item.displayName}}<text wx:if="{{item.displayName !== item.name}}">（{{item.name}}）</text>
+      </view>
     </view>
     <view class="member-select-cancel" bindtap="onCancelSelect">取消</view>
+  </view>
+
+  <!-- 非管理员绑定确认弹窗 -->
+  <view class="mask" wx:if="{{showBindConfirm}}"></view>
+  <view class="bind-confirm-panel" wx:if="{{showBindConfirm}}">
+    <view class="bind-confirm-title">识别到成员</view>
+    <view class="bind-confirm-name">
+      {{bindConfirmRecognizedDisplayName}}<text wx:if="{{bindConfirmRecognizedDisplayName !== bindConfirmRecognizedName}}">（{{bindConfirmRecognizedName}}）</text>
+    </view>
+    <view class="bind-confirm-question">是否绑定到您的成员</view>
+    <view class="bind-confirm-bound">
+      {{boundMemberDisplayName}}<text wx:if="{{boundMemberDisplayName !== boundMemberName}}">（{{boundMemberName}}）</text>
+    </view>
+    <view class="bind-confirm-actions">
+      <button class="btn-primary" bindtap="onConfirmBindRecognized">确定</button>
+      <button class="btn-ghost" bindtap="onCancelBindConfirm">取消</button>
+    </view>
   </view>
 
   <view class="card" wx:if="{{preview}}">
     <view class="preview-title">识别结果预览<text wx:if="{{targetName && targetName !== '全部'}}">（{{targetName}}）</text></view>
     <view class="preview-tip">识别可能有误差，点按班次可循环切换，确认后再入库</view>
     <view class="member-preview" wx:for="{{preview}}" wx:key="name" wx:for-index="idx">
-      <view class="member-name">{{item.name}}</view>
+      <view class="member-name">{{item.displayName}}<text wx:if="{{item.displayName !== item.name}}">（{{item.name}}）</text></view>
       <view class="shift-tags">
         <view class="shift-tag" wx:for="{{item.rows}}" wx:for-item="row" wx:key="date"
               data-idx="{{idx}}" data-date="{{row.date}}" bindtap="onFixShift">

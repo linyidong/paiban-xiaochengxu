@@ -1,6 +1,5 @@
 .mine-page { padding-bottom: 40rpx; }
-.mine-name { font-size: 40rpx; font-weight: 600; }
-.mine-role { font-size: 26rpx; color: #6B7280; margin-top: 8rpx; }
+.mine-name { font-size: 36rpx; font-weight: 600; }
 .mine-title { font-size: 30rpx; font-weight: 600; margin-bottom: 24rpx; }
 .stat-row { display: flex; }
 .stat-item { flex: 1; text-align: center; }
@@ -8,3 +7,19 @@
 .stat-label { font-size: 26rpx; color: #6B7280; margin-top: 4rpx; }
 .mine-link { font-size: 30rpx; color: #3B82F6; padding: 8rpx 0; }
 .mine-link.logout { color: #EF4444; }
+
+/* 未绑定提示 */
+.mine-bindtip {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  background: #FEF3C7;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  color: #92400E;
+  text-align: center;
+}
+.mine-bindbtn {
+  margin-top: 12rpx;
+  color: #3B82F6;
+  font-weight: 600;
+}

@@ -1,15 +1,19 @@
 // 我的页：身份 + 当月我的排班摘要 + 管理员入口
 Page({
-  data: { role: '', name: '', summary: null, isAdmin: false },
+  data: { role: '', name: '', summary: null, isAdmin: false, hasBound: false },
   onShow() {
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) { wx.reLaunch({ url: '/pages/login/login' }); return; }
+    const hasBound = !!session.name;
     this.setData({
       role: session.role === 'admin' ? '管理员' : '成员',
       name: session.name || '',
-      isAdmin: session.role === 'admin'
+      isAdmin: session.role === 'admin',
+      hasBound: hasBound
     });
-    this.loadMySummary(session.name || '');
+    if (hasBound) {
+      this.loadMySummary(session.name);
+    }
   },
   loadMySummary(name) {
     const now = new Date();
@@ -34,8 +38,11 @@ Page({
     });
   },
   goMembers() { wx.navigateTo({ url: '/pages/members/members' }); },
+  goMemo() { wx.navigateTo({ url: '/pages/memo/memo' }); },
+  goBind() { wx.reLaunch({ url: '/pages/login/login' }); },
   onLogout() {
-    wx.removeStorageSync('session');
+    const session = wx.getStorageSync('session');
+    wx.setStorageSync('session', { openid: session.openid || '', name: '', role: session.role || '' });
     wx.reLaunch({ url: '/pages/login/login' });
   }
 });

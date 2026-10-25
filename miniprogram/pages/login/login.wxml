@@ -6,18 +6,98 @@
     <button class="btn-primary login-btn" bindtap="onLogin" loading="{{loading}}">微信一键登录</button>
   </view>
 
-  <!-- 绑定昵称 -->
+  <!-- 绑定成员 -->
   <view class="bind-card card" wx:if="{{needBind}}">
-    <view class="bind-title">请选择您的昵称</view>
-    <view class="bind-desc">管理员已添加成员列表，请选择您的名字完成绑定</view>
-    <view class="bind-list">
-      <view class="bind-item {{selectedName === item.name ? 'active' : ''}}"
-            wx:for="{{memberList}}" wx:key="name"
-            data-name="{{item.name}}" bindtap="onSelectName">
-        {{item.name}}
+    <view class="bind-title">绑定您的成员身份</view>
+    <view class="bind-desc">选择已有成员或创建新成员，绑定后才能查看和修改排班</view>
+
+    <!-- 当前已绑定的成员 -->
+    <view class="bind-section" wx:if="{{myBoundName}}">
+      <view class="bind-section-title">当前已绑定</view>
+      <view class="bind-list">
+        <view class="bind-item {{selectedName === myBoundName ? 'active' : ''}}"
+              data-name="{{myBoundName}}" data-displayname="{{myBoundDisplayName}}" bindtap="onSelectName">
+          {{myBoundDisplayName}}（当前绑定）
+        </view>
       </view>
     </view>
-    <view class="bind-empty" wx:if="{{!memberList.length}}">暂无成员，请联系管理员添加</view>
-    <button class="btn-primary bind-btn" bindtap="onConfirmBind" loading="{{loading}}" disabled="{{!selectedName}}">确认绑定</button>
+
+    <!-- 选择已有成员 -->
+    <view class="bind-section" wx:if="{{memberList.length}}">
+      <view class="bind-section-title">选择已有成员</view>
+      <view class="bind-list">
+        <view class="bind-item {{selectedName === item.name ? 'active' : ''}}"
+              wx:for="{{memberList}}" wx:key="name"
+              data-name="{{item.name}}" data-displayname="{{item.displayName}}" bindtap="onSelectName">
+          {{item.displayName}}
+        </view>
+      </view>
+    </view>
+    <view class="bind-empty" wx:if="{{!memberList.length && !myBoundName && !showCreateInput}}">暂无可绑定的成员，请创建新成员</view>
+
+    <!-- 确认绑定按钮 -->
+    <button class="btn-primary bind-btn" wx:if="{{selectedName}}" bindtap="onConfirmBind" loading="{{loading}}">确认绑定「{{selectedDisplayName}}」</button>
+
+    <!-- 创建新成员（仅未绑定时可用） -->
+    <view class="bind-section" wx:if="{{!myBoundName}}">
+      <view class="bind-create-toggle" bindtap="onToggleCreate">
+        {{showCreateInput ? '取消创建' : '+ 创建新成员'}}
+      </view>
+      <view class="bind-create-form" wx:if="{{showCreateInput}}">
+        <input class="bind-input" placeholder="输入成员昵称" value="{{newName}}" bindinput="onNewNameInput" />
+        <button class="btn-primary bind-create-btn" bindtap="onCreateAndBind" loading="{{loading}}">创建并绑定</button>
+      </view>
+    </view>
+
+    <!-- 导入排班信息（仅未绑定时可用） -->
+    <view class="bind-section" wx:if="{{!myBoundName}}">
+      <view class="bind-import-toggle" bindtap="onImportShift">导入排班信息</view>
+    </view>
+
+    <!-- 已绑定提示 -->
+    <view class="bind-section" wx:if="{{myBoundName}}">
+      <view class="bind-bound-hint">您已绑定成员，请直接进入日历查看排班</view>
+      <button class="btn-primary bind-enter-btn" bindtap="onEnterCalendar">进入日历</button>
+    </view>
+
+    <!-- 管理员跳过 -->
+    <view class="bind-skip" wx:if="{{isAdmin}}" bindtap="onSkipBind">管理员跳过绑定 →</view>
+  </view>
+
+  <!-- 导入排班：多人选择遮罩 -->
+  <view class="mask" wx:if="{{showMemberSelect}}" bindtap="onCancelSelect"></view>
+  <view class="member-select-panel" wx:if="{{showMemberSelect}}">
+    <view class="member-select-title">识别到 {{recognizedMembers.length}} 位成员，请选择要导入谁的排班</view>
+    <view class="member-select-list">
+      <view class="member-select-item" wx:for="{{recognizedMembers}}" wx:key="name"
+            data-name="{{item.name}}" bindtap="onSelectImportMember">
+        {{item.displayName}}<text wx:if="{{item.displayName !== item.name}}">（{{item.name}}）</text>
+      </view>
+    </view>
+    <view class="member-select-cancel" bindtap="onCancelSelect">取消</view>
+  </view>
+
+  <!-- 导入排班：预览确认 -->
+  <view class="card import-preview-card" wx:if="{{importPreview}}">
+    <view class="preview-title">识别结果预览<text wx:if="{{importTargetName}}">（{{importTargetName}}）</text></view>
+    <view class="preview-tip">识别可能有误差，点按班次可循环切换</view>
+    <view class="member-preview" wx:for="{{importPreview}}" wx:key="name" wx:for-index="idx">
+      <view class="member-name">{{item.displayName}}<text wx:if="{{item.displayName !== item.name}}">（{{item.name}}）</text></view>
+      <view class="shift-tags">
+        <view class="shift-tag" wx:for="{{item.rows}}" wx:for-item="row" wx:key="date"
+              data-idx="{{idx}}" data-date="{{row.date}}" bindtap="onFixImportShift">
+          {{row.date.slice(5)}} · {{row.shift}}
+        </view>
+      </view>
+    </view>
+    <!-- 绑定成员名确认/修改 -->
+    <view class="import-bind-section">
+      <view class="import-bind-label">绑定到成员：</view>
+      <input class="bind-input import-bind-input" placeholder="输入或确认成员昵称" value="{{importBindName}}" bindinput="onImportBindNameInput" />
+    </view>
+    <view class="preview-actions">
+      <button class="btn-primary" bindtap="onConfirmImport" loading="{{importLoading}}">确认绑定并导入</button>
+      <button class="btn-ghost" bindtap="onCancelImport">取消</button>
+    </view>
   </view>
 </view>

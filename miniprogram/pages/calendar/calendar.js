@@ -2,9 +2,25 @@
 const app = getApp();
 const cal = require('../../utils/calendar.js');
 const { SHIFT_TYPES, SHIFT_COLOR, getShiftColor, getDisplayName } = require('../../utils/shift.js');
-const DEFAULT_SHIFTS = ['休', '正A', '正B', '售A', '售B', '年假'];
-const ADMIN_SHIFTS = ['休', '白班', '晚班', '年假'];
-const DEFAULT_SHIFT_COLORS = { '休': '#EF4444', '正A': '#3B82F6', '正B': '#3B82F6', '售A': '#111827', '售B': '#111827', '白班': '#3B82F6', '晚班': '#111827', '年假': '#10B981' };
+const DEFAULT_SHIFTS = ['休', '白班', '晚班', '年假', '取消'];
+const DEFAULT_SHIFT_COLORS = { '休': '#EF4444', '正A': '#3B82F6', '正B': '#3B82F6', '售A': '#111827', '售B': '#111827', '白班': '#3B82F6', '晚班': '#111827', '年假': '#10B981', '取消': '#9CA3AF' };
+function normalizeDigits(text) {
+  text = String(text).replace(/[\uff10-\uff19]/g, function (ch) {
+    return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
+  });
+  // 去掉数字和月/号/日之间的空格（中文输入法自动加的空格）
+  text = text.replace(/(\d)\s+(月|号|日)/g, '$1$2');
+  text = text.replace(/(月|号|日)\s+(\d)/g, '$1$2');
+  return text;
+}
+function extractMonth(text) {
+  var m = normalizeDigits(text).match(/(\d{1,2})\s*月/);
+  return m ? parseInt(m[1]) : 0;
+}
+function extractDay(text) {
+  var m = normalizeDigits(text).match(/月\s*(\d{1,2})\s*[号日]/);
+  return m ? parseInt(m[1]) : 999;
+}
 Page({
   data: {
     year: 0,
@@ -14,6 +30,8 @@ Page({
     selectedMember: '',
     today: '',
     hasData: true,
+    memos: [],
+    emptyText: '',
     // 班次选择弹窗
     showPicker: false,
     pickerTitle: '',
@@ -30,8 +48,6 @@ Page({
     datePickMode: 'year',  // 'year' 选年份, 'month' 选月份
     tempYear: 0,
     yearList: [],
-    // 月份网格数据
-    monthGrid: [],
     memberMonths: {}
   },
   onShow() {
@@ -40,10 +56,14 @@ Page({
       wx.reLaunch({ url: '/pages/login/login' });
       return;
     }
+    // 非管理员未绑定成员 → 跳转登录页绑定
+    if (session.role !== 'admin' && !session.name) {
+      wx.reLaunch({ url: '/pages/login/login' });
+      return;
+    }
     app.globalData.name = session.name || '';
     const now = new Date();
     const currentYear = now.getFullYear();
-    // 生成年份列表：当前年份前后各3年
     const yearList = [];
     for (let y = currentYear - 3; y <= currentYear + 3; y++) yearList.push(y);
     this.setData({
@@ -89,19 +109,22 @@ Page({
           members: members,
           isAdmin: dbIsAdmin || session.role === 'admin'
         });
-        // 若当前成员无排班、但其他成员有排班 → 自动切换到第一个有排班的成员（导入后立即显示）
-        const map = r.shiftsMap || {};
-        const hasDataMembers = Object.keys(map).filter(function (n) { return n && Object.keys(map[n] || {}).length; });
-        if (hasDataMembers.length && hasDataMembers.indexOf(this.data.selectedMember) === -1) {
-          const name = hasDataMembers[0];
-          const dm = members.find(function (x) { return x.name === name; });
-          this.setData({ selectedMember: name });
-          wx.showToast({ title: '已切换到 ' + (dm ? dm.displayName : name) + ' 的排班', icon: 'none' });
+        // 检查是否有导入后需要切换到的成员
+        const importTarget = wx.getStorageSync('importTargetMember');
+        if (importTarget) {
+          wx.removeStorageSync('importTargetMember');
+          const tm = members.find(function (x) { return x.name === importTarget; });
+          if (tm) {
+            this.setData({ selectedMember: importTarget });
+          }
         }
         // 判断当前选中成员在该月是否有排班数据
+        const map = r.shiftsMap || {};
         const myMap = map[this.data.selectedMember] || {};
         const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
+        // 立即更新 hasData，不等待备忘录加载
         this.setData({ hasData: hasData });
+        this._loadMemosForMonth(hasData);
         this.applyShifts(cells);
       },
       fail: (err) => {
@@ -132,8 +155,8 @@ Page({
     
     var types;
     if (isSelectedAdmin) {
-      // 管理员始终显示4个默认状态
-      types = ADMIN_SHIFTS.slice();
+      // 管理员始终显示5个默认状态
+      types = DEFAULT_SHIFTS.slice();
     } else {
       // 其他成员：提取实际使用的班次类型
       var used = {};
@@ -143,7 +166,7 @@ Page({
         if (t) used[t] = true;
       });
       types = Object.keys(used);
-      // 如果没有排班数据，使用默认6个状态
+      // 如果没有排班数据，使用默认5个状态
       if (!types.length) {
         types = DEFAULT_SHIFTS.slice();
       } else {
@@ -158,34 +181,45 @@ Page({
     const name = e.currentTarget.dataset.name;
     this.setData({ selectedMember: name });
     this.applyShifts(this.data.cells);
+    const myMap = this._lastMap[name] || {};
+    const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
+    this.setData({ hasData: hasData });
+    this._loadMemosForMonth(hasData);
   },
-  // 重新检测权限：实时调用 login 云函数，刷新本地 session（不用退出重登）
-  refreshAuth() {
-    wx.showLoading({ title: '检测中' });
+  _loadMemosForMonth(hasData) {
+    var self = this;
+    var currentMonth = this.data.month;
+    var session = wx.getStorageSync('session') || {};
+    // 备忘录属于个人：只有查看自己的排班时才显示自己的备忘录，
+    // 查看其他成员的排班时不显示（避免把当前登录用户的备忘录展示在成员日历里）
+    if (this.data.selectedMember !== (session.name || '')) {
+      var emptyText = '';
+      if (!hasData) {
+        emptyText = self.data.year + '年' + self.data.month + '月暂无排班信息';
+      }
+      self.setData({ memos: [], emptyText: emptyText });
+      return;
+    }
     wx.cloud.callFunction({
-      name: 'login',
-      success: (res) => {
-        wx.hideLoading();
-        const r = res.result || {};
-        if (!r.ok) { wx.showToast({ title: r.msg || '检测失败', icon: 'none' }); return; }
-        const session = wx.getStorageSync('session') || {};
-        session.openid = r.openid;
-        session.role = r.role;
-        session.name = r.name || session.name;
-        wx.setStorageSync('session', session);
-        const app = getApp();
-        app.globalData.openid = r.openid;
-        app.globalData.role = r.role;
-        app.globalData.name = r.name;
-        // 权限判断：优先用 members 列表中的数据库角色（比 session 可靠）
-        const currentUser = this.data.members.find(function (x) { return x.name === (r.name || session.name || ''); });
-        const dbIsAdmin = currentUser && currentUser.role === 'admin';
-        this.setData({ isAdmin: dbIsAdmin || r.role === 'admin' });
-        wx.showToast({ title: '权限已刷新：' + r.role, icon: 'none' });
-        // 重新应用排班显示（根据选中成员的角色更新图例和弹窗）
-        this.applyShifts(this.data.cells);
+      name: 'manageMemo',
+      data: { action: 'list' },
+      success: function (memoRes) {
+        var mr = memoRes.result || {};
+        var allMemos = mr.memos || [];
+        var memos = allMemos.filter(function (m) {
+          return extractMonth(m.text) === currentMonth;
+        }).sort(function (a, b) { return extractDay(a.text) - extractDay(b.text); });
+        var emptyText = '';
+        if (!hasData && !memos.length) {
+          emptyText = self.data.year + '年' + self.data.month + '月暂无排班信息和备忘录';
+        } else if (hasData && !memos.length) {
+          emptyText = '当前月份没有备忘录';
+        }
+        self.setData({ memos: memos, emptyText: emptyText });
       },
-      fail: () => { wx.hideLoading(); wx.showToast({ title: '检测失败', icon: 'none' }); }
+      fail: function () {
+        self.setData({ memos: [], emptyText: '' });
+      }
     });
   },
   onDeleteMember() {
@@ -278,8 +312,8 @@ Page({
     // 使用已根据成员实际排班数据计算的选项
     var options = this.data.shiftOptions;
     if (!options.length) {
-      // 兜底：管理员4个，其他成员6个
-      var shifts = this.data.isAdmin ? ADMIN_SHIFTS : DEFAULT_SHIFTS;
+      // 兜底：5个默认状态
+      var shifts = this.data.isAdmin ? DEFAULT_SHIFTS : DEFAULT_SHIFTS;
       options = shifts.map(function (t) { return { type: t, color: SHIFT_COLOR[t] || DEFAULT_SHIFT_COLORS[t] || '#9CA3AF' }; });
     }
     this.setData({ showPicker: true, pickerTitle: title, pendingDates: dates, shiftOptions: options });
@@ -296,15 +330,18 @@ Page({
       wx.showModal({ title: '无法设置', content: '你还没登记为成员：请先到「我的」页添加自己为成员，再回来设置排班', showCancel: false });
       return;
     }
+    // "取消" = 清空排班，传空字符串给云函数
+    const finalShift = shift === '取消' ? '' : shift;
     wx.showLoading({ title: '保存中' });
     wx.cloud.callFunction({
       name: 'updateShift',
-      data: { name: name, shift: shift, dates: dates },
+      data: { name: name, shift: finalShift, dates: dates },
       success: (res) => {
         const r = res.result || {};
         wx.hideLoading();
         if (r.ok) {
-          wx.showToast({ title: '已设置 ' + (r.count || dates.length) + ' 天', icon: 'success' });
+          const msg = finalShift ? ('已设置 ' + (r.count || dates.length) + ' 天') : ('已取消 ' + (r.count || dates.length) + ' 天排班');
+          wx.showToast({ title: msg, icon: 'success' });
           this.setData({ showPicker: false, multiSelect: false, selectedDates: [] });
           this.loadShifts();
         } else {

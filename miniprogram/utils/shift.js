@@ -3,7 +3,6 @@
 const cfg = require('../config.js');
 const SHIFT_TYPES = cfg.SHIFT_TYPES || ['休', '正A', '正B', '售A', '售B'];
 const SHIFT_COLOR = cfg.SHIFT_COLOR || {};
-const STYLE = cfg.STYLE || {};
 const SHIFT_LABEL = { '休': '休息' };
 const MEMBER_ALIAS = cfg.MEMBER_ALIAS || {};
 // 取班次颜色（未配置的班次显示灰色兜底）
@@ -21,4 +20,4 @@ function getDisplayName(formalName) {
   }
   return formalName;
 }
-module.exports = { SHIFT_TYPES, SHIFT_COLOR, SHIFT_LABEL, STYLE, MEMBER_ALIAS, getShiftColor, getDisplayName };
+module.exports = { SHIFT_TYPES, SHIFT_COLOR, SHIFT_LABEL, MEMBER_ALIAS, getShiftColor, getDisplayName };

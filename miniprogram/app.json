@@ -3,9 +3,9 @@
     "pages/calendar/calendar",
     "pages/login/login",
     "pages/import/import",
-    "pages/edit/edit",
     "pages/members/members",
-    "pages/mine/mine"
+    "pages/mine/mine",
+    "pages/memo/memo"
   ],
   "window": {
     "navigationBarBackgroundColor": "#F7F8FA",

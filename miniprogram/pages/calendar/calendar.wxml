@@ -5,19 +5,36 @@
     <view class="month-nav" bindtap="onNextMonth">›</view>
   </view>
 
-  <scroll-view scroll-x class="member-scroll" wx:if="{{members.length}}">
+  <scroll-view scroll-x class="member-scroll" wx:if="{{isAdmin && members.length}}">
     <view class="member-item {{selectedMember === item.name ? 'active' : ''}}"
           wx:for="{{members}}" wx:key="name"
           data-name="{{item.name}}" bindtap="onSelectMember">{{item.displayName}}</view>
   </scroll-view>
 
+  <!-- 非管理员显示当前绑定的成员名 -->
+  <view class="member-current" wx:if="{{!isAdmin && selectedMember}}">
+    <text class="member-current-label">当前成员：</text>
+    <text class="member-current-name">{{selectedMember}}</text>
+  </view>
+
   <view class="cal-card card">
     <calendar cells="{{cells}}" bind:selectday="onTapDay" bind:longpressday="onLongPressDay" />
     <view class="multi-btn {{multiSelect ? 'on' : ''}}" bindtap="onToggleMulti">{{multiSelect ? '完成' : '批量'}}</view>
-    <!-- 无排班提示 -->
-    <view class="empty-tip" wx:if="{{!hasData}}">
+    <!-- 无排班且无备忘录提示 -->
+    <view class="empty-tip" wx:if="{{!hasData && !memos.length}}">
       <view class="empty-icon"></view>
-      <view class="empty-text">{{year}}年{{month}}月暂无排班</view>
+      <view class="empty-text">{{emptyText}}</view>
+    </view>
+    <!-- 有排班但无备忘录 -->
+    <view class="memo-empty-tip" wx:if="{{hasData && !memos.length}}">
+      <view class="empty-text">{{emptyText}}</view>
+    </view>
+    <!-- 备忘录列表 -->
+    <view class="memo-section" wx:if="{{memos.length}}">
+      <view class="memo-section-title">本月备忘录如下：</view>
+      <view class="memo-item" wx:for="{{memos}}" wx:key="_id">
+        <view class="memo-text">{{item.text}}</view>
+      </view>
     </view>
   </view>
 
@@ -34,7 +51,6 @@
       </view>
     </view>
     <view class="legend-actions">
-      <view class="legend-act-btn legend-act-refresh" bindtap="refreshAuth">🔄 重新检测权限</view>
       <view class="legend-act-btn legend-act-delete" wx:if="{{isAdmin}}" bindtap="onDeleteMember">删除成员</view>
     </view>
   </view>

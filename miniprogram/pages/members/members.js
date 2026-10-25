@@ -1,7 +1,7 @@
 // 成员管理页（仅管理员可见入口；云函数二次校验）
 const { getDisplayName } = require('../../utils/shift.js');
 Page({
-  data: { members: [], inputName: '', inputWx: '' },
+  data: { members: [] },
   onShow() {
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) { wx.reLaunch({ url: '/pages/login/login' }); return; }
@@ -29,28 +29,13 @@ Page({
       fail: () => wx.showToast({ title: '加载失败', icon: 'none' })
     });
   },
-  onName(e) { this.setData({ inputName: e.detail.value }); },
-  onWx(e) { this.setData({ inputWx: e.detail.value }); },
-  onAdd() {
-    const name = this.data.inputName.trim();
-    if (!name) { wx.showToast({ title: '请输入姓名', icon: 'none' }); return; }
-    wx.cloud.callFunction({
-      name: 'manageMember',
-      data: { action: 'add', name: name, wxId: this.data.inputWx.trim() },
-      success: (res) => {
-        const r = res.result || {};
-        if (r.ok) { this.setData({ inputName: '', inputWx: '' }); this.loadMembers(); }
-        else wx.showToast({ title: r.msg || '添加失败', icon: 'none' });
-      },
-      fail: () => wx.showToast({ title: '添加失败', icon: 'none' })
-    });
-  },
   onRemove(e) {
     const id = e.currentTarget.dataset.id;
     const name = e.currentTarget.dataset.name;
     wx.showModal({
       title: '移除成员',
-      content: '确定移除 ' + name + '？历史排班保留。',
+      content: '确定移除 ' + name + '？该成员的排班记录也将被删除。',
+      confirmColor: '#EF4444',
       success: (r) => {
         if (!r.confirm) return;
         wx.cloud.callFunction({
@@ -58,10 +43,39 @@ Page({
           data: { action: 'remove', id: id },
           success: (res) => {
             const r2 = res.result || {};
-            if (r2.ok) this.loadMembers();
-            else wx.showToast({ title: r2.msg || '移除失败', icon: 'none' });
+            if (r2.ok) {
+              wx.showToast({ title: '已移除', icon: 'success' });
+              this.loadMembers();
+            } else {
+              wx.showToast({ title: r2.msg || '移除失败', icon: 'none' });
+            }
           },
           fail: () => wx.showToast({ title: '移除失败', icon: 'none' })
+        });
+      }
+    });
+  },
+  onUnbind(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = e.currentTarget.dataset.name;
+    wx.showModal({
+      title: '解除绑定',
+      content: '确定解除 ' + name + ' 的微信绑定？该用户需要重新选择绑定成员。',
+      success: (r) => {
+        if (!r.confirm) return;
+        wx.cloud.callFunction({
+          name: 'manageMember',
+          data: { action: 'unbind', id: id },
+          success: (res) => {
+            const r2 = res.result || {};
+            if (r2.ok) {
+              wx.showToast({ title: '已解绑', icon: 'success' });
+              this.loadMembers();
+            } else {
+              wx.showToast({ title: r2.msg || '解绑失败', icon: 'none' });
+            }
+          },
+          fail: () => wx.showToast({ title: '解绑失败', icon: 'none' })
         });
       }
     });
