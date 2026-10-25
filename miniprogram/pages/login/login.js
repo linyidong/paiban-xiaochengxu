@@ -312,8 +312,9 @@ Page({
     const row = preview[idx].rows.find(function (r) { return r.date === date; });
     if (!row) return;
     const SHIFT_TYPES = require('../../utils/shift.js').SHIFT_TYPES;
-    const cur = SHIFT_TYPES.indexOf(row.shift);
-    row.shift = SHIFT_TYPES[(cur + 1) % SHIFT_TYPES.length];
+    const list = SHIFT_TYPES.concat(['取消']);
+    const cur = list.indexOf(row.shift);
+    row.shift = list[(cur + 1) % list.length];
     this.setData({ importPreview: preview });
   },
   onImportBindNameInput(e) {
@@ -349,10 +350,10 @@ Page({
         const adjustedPreview = preview.map(function (p) {
           return { name: finalName, rows: p.rows };
         });
-        const now = new Date();
         wx.cloud.callFunction({
           name: 'importShift',
-          data: { commit: true, preview: adjustedPreview, year: now.getFullYear(), month: now.getMonth() + 1 },
+          // 不再传当前年月：由识别结果显示的 year/month 决定，避免跨月导入被误判
+          data: { commit: true, preview: adjustedPreview },
           success: (res) => {
             wx.hideLoading();
             const r2 = res.result || {};
@@ -363,6 +364,13 @@ Page({
               app.globalData.role = session.role;
               app.globalData.name = finalName;
               wx.setStorageSync('importTargetMember', finalName);
+              const firstRow = adjustedPreview[0] && adjustedPreview[0].rows && adjustedPreview[0].rows[0];
+              const target = { name: finalName };
+              if (firstRow && firstRow.date) {
+                target.year = Number(firstRow.date.slice(0, 4));
+                target.month = Number(firstRow.date.slice(5, 7));
+              }
+              wx.setStorageSync('importTarget', target);
               wx.showToast({ title: '导入成功', icon: 'success' });
               this.setData({ importPreview: null, importTargetName: '', importBindName: '' });
               setTimeout(function () { wx.switchTab({ url: '/pages/calendar/calendar' }); }, 800);

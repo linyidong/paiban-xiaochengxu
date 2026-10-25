@@ -1,9 +1,7 @@
 // 首页·日历视图：月历 + 班次标记 + 点击日期弹窗选班次（长按/批量按钮进入多选，统一设置）
 const app = getApp();
 const cal = require('../../utils/calendar.js');
-const { SHIFT_TYPES, SHIFT_COLOR, getShiftColor, getDisplayName } = require('../../utils/shift.js');
-const DEFAULT_SHIFTS = ['休', '白班', '晚班', '年假', '取消'];
-const DEFAULT_SHIFT_COLORS = { '休': '#EF4444', '正A': '#3B82F6', '正B': '#3B82F6', '售A': '#111827', '售B': '#111827', '白班': '#3B82F6', '晚班': '#111827', '年假': '#10B981', '取消': '#9CA3AF' };
+const { getShiftColor, getShiftOptions, getDisplayName } = require('../../utils/shift.js');
 function normalizeDigits(text) {
   text = String(text).replace(/[\uff10-\uff19]/g, function (ch) {
     return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
@@ -36,9 +34,9 @@ Page({
     showPicker: false,
     pickerTitle: '',
     pendingDates: [],       // 弹窗确认时要设置的日期（单/多）
-    shiftOptions: DEFAULT_SHIFTS.map(function (t) { return { type: t, color: DEFAULT_SHIFT_COLORS[t] || '#9CA3AF' }; }),
+    shiftOptions: getShiftOptions(),
     // 底部图例
-    legendItems: DEFAULT_SHIFTS.map(function (t) { return { type: t, color: DEFAULT_SHIFT_COLORS[t] || '#9CA3AF' }; }),
+    legendItems: getShiftOptions(),
     // 多选模式
     multiSelect: false,
     selectedDates: [],
@@ -66,11 +64,16 @@ Page({
     const currentYear = now.getFullYear();
     const yearList = [];
     for (let y = currentYear - 3; y <= currentYear + 3; y++) yearList.push(y);
+    // 导入成功后需要定位到“被导入成员 + 对应年月”
+    const pending = wx.getStorageSync('importTarget');
+    if (pending) wx.removeStorageSync('importTarget');
+    const year = pending && pending.year ? Number(pending.year) : currentYear;
+    const month = pending && pending.month ? Number(pending.month) : now.getMonth() + 1;
     this.setData({
-      year: currentYear,
-      month: now.getMonth() + 1,
+      year: year,
+      month: month,
       today: cal.getToday(),
-      selectedMember: session.name || '',
+      selectedMember: (pending && pending.name) || session.name || '',
       isAdmin: session.role === 'admin',
       tempYear: currentYear,
       yearList: yearList
@@ -149,32 +152,8 @@ Page({
     this.updateShiftDisplay(myMap);
   },
   updateShiftDisplay(myMap) {
-    // 判断选中成员是否为管理员
-    const selectedMemberData = this.data.members.find(function (m) { return m.name === this.data.selectedMember; }.bind(this));
-    const isSelectedAdmin = selectedMemberData && selectedMemberData.role === 'admin';
-    
-    var types;
-    if (isSelectedAdmin) {
-      // 管理员始终显示5个默认状态
-      types = DEFAULT_SHIFTS.slice();
-    } else {
-      // 其他成员：提取实际使用的班次类型
-      var used = {};
-      Object.keys(myMap).forEach(function (d) {
-        var raw = myMap[d] || '';
-        var t = String(raw).replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '').trim();
-        if (t) used[t] = true;
-      });
-      types = Object.keys(used);
-      // 如果没有排班数据，使用默认5个状态
-      if (!types.length) {
-        types = DEFAULT_SHIFTS.slice();
-      } else {
-        // 确保包含"年假"选项
-        if (types.indexOf('年假') === -1) types.push('年假');
-      }
-    }
-    var items = types.map(function (t) { return { type: t, color: SHIFT_COLOR[t] || DEFAULT_SHIFT_COLORS[t] || '#9CA3AF' }; });
+    // 统一班次源：config.SHIFT_TYPES + 取消；图例与弹窗同源，不再按“已用班次”裁剪
+    const items = getShiftOptions();
     this.setData({ legendItems: items, shiftOptions: items });
   },
   onSelectMember(e) {
@@ -312,9 +291,7 @@ Page({
     // 使用已根据成员实际排班数据计算的选项
     var options = this.data.shiftOptions;
     if (!options.length) {
-      // 兜底：5个默认状态
-      var shifts = this.data.isAdmin ? DEFAULT_SHIFTS : DEFAULT_SHIFTS;
-      options = shifts.map(function (t) { return { type: t, color: SHIFT_COLOR[t] || DEFAULT_SHIFT_COLORS[t] || '#9CA3AF' }; });
+      options = getShiftOptions();
     }
     this.setData({ showPicker: true, pickerTitle: title, pendingDates: dates, shiftOptions: options });
   },

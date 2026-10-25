@@ -223,7 +223,7 @@ Page({
     const row = preview[idx].rows.find(function (r) { return r.date === date; });
     if (!row) return;
     const SHIFT_TYPES = require('../../utils/shift.js').SHIFT_TYPES;
-    const list = SHIFT_TYPES;
+    const list = SHIFT_TYPES.concat(['取消']);
     const cur = list.indexOf(row.shift);
     row.shift = list[(cur + 1) % list.length];
     this.setData({ preview: preview });
@@ -239,19 +239,28 @@ Page({
       success: (r) => {
         if (!r.confirm) return;
         wx.showLoading({ title: '导入中...' });
-        const now = new Date();
         wx.cloud.callFunction({
           name: 'importShift',
-          data: { commit: true, preview: preview, year: now.getFullYear(), month: now.getMonth() + 1 },
+          // 不传当前年月：由识别结果显示的 year/month 决定
+          data: { commit: true, preview: preview },
           success: (res) => {
             wx.hideLoading();
             const r2 = res.result || {};
             if (r2.ok) {
               wx.showToast({ title: '导入成功', icon: 'success' });
               this.setData({ preview: null, targetName: '' });
-              // 告诉日历页切换到导入的成员
+              // 告诉日历页切换到导入的成员与月份
               let switchTo = targetName && targetName !== '全部' ? targetName : (preview[0] && preview[0].name || '');
-              if (switchTo) wx.setStorageSync('importTargetMember', switchTo);
+              if (switchTo) {
+                wx.setStorageSync('importTargetMember', switchTo);
+                const firstRow = preview[0] && preview[0].rows && preview[0].rows[0];
+                const target = { name: switchTo };
+                if (firstRow && firstRow.date) {
+                  target.year = Number(firstRow.date.slice(0, 4));
+                  target.month = Number(firstRow.date.slice(5, 7));
+                }
+                wx.setStorageSync('importTarget', target);
+              }
               setTimeout(function () { wx.switchTab({ url: '/pages/calendar/calendar' }); }, 600);
             } else {
               wx.showToast({ title: r2.msg || '导入失败', icon: 'none' });

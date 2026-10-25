@@ -141,11 +141,11 @@ exports.main = async (event) => {
         if (matched !== finalName && nameToId[matched]) { finalName = matched; userId = nameToId[matched]; }
       }
     }
-    const rows = p.rows.filter(function (r) { return r.date && r.shift; });
-    if (!rows.length) continue;
-    const monthKey = rows[0].date.slice(0, 7);
-    if (!/^\d{4}-\d{2}$/.test(monthKey)) return { ok: false, msg: '日期格式不合法：' + rows[0].date };
-    for (const r of rows) {
+    const allRows = p.rows.filter(function (r) { return r.date; });
+    if (!allRows.length) continue;
+    const monthKey = allRows[0].date.slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(monthKey)) return { ok: false, msg: '日期格式不合法：' + allRows[0].date };
+    for (const r of allRows) {
       if (r.date.slice(0, 7) !== monthKey) {
         return { ok: false, msg: '预览包含多个月份，请重新识别或按月份分别导入' };
       }
@@ -157,6 +157,8 @@ exports.main = async (event) => {
         return { ok: false, msg: '识别月份（' + monthKey + '）与选择月份（' + want + '）不一致，请校对' };
       }
     }
+    // “取消”是清空动作：不写入班次，但该日期仍属于本月替换范围
+    const rows = allRows.filter(function (r) { return r.shift && r.shift !== '取消'; });
     plans.push({ name: finalName, userId: userId, rows: rows, monthKey: monthKey });
   }
   if (!plans.length) return { ok: false, msg: '预览为空' };
