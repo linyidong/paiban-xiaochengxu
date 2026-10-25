@@ -498,11 +498,98 @@ function mockPreview() {
   ];
 }
 
-// Excel 解析：TODO 启用真实解析（package.json 已含 xlsx 依赖）
-async function parseExcel(fileID) {
-  // 1. const down = await cloud.downloadFile({ fileID });
-  // 2. const XLSX = require('xlsx'); 读取 sheet
-  //    表头行=日期（如 1..31），左列=姓名，交叉单元格=班次文本
-  // 3. 组装 [{name, rows:[{date, shift}]}] 返回
-  return [];
+// Excel 解析（纯函数部分）：二维表 → preview
+// 约定：表头行含 1~31 日期列；左侧前两列为“昵称/人员”；交叉单元格为班次文本
+function parseSheetRows(rows, yearOverride, monthOverride) {
+  if (!Array.isArray(rows) || !rows.length) return [];
+  const now = new Date();
+  let year = parseInt(yearOverride, 10) || now.getFullYear();
+  let month = parseInt(monthOverride, 10) || now.getMonth() + 1;
+
+  // 从标题行提取“YYYY年M月”或“M月”
+  let foundYm = false;
+  for (const r of rows) {
+    if (foundYm) break;
+    for (const cell of r) {
+      const s = String(cell == null ? '' : cell);
+      const ym = s.match(/(20\d{2})\s*年\s*(\d{1,2})\s*月/);
+      if (ym) {
+        year = parseInt(ym[1], 10);
+        month = parseInt(ym[2], 10);
+        foundYm = true;
+        break;
+      }
+      if (!monthOverride) {
+        const m = s.match(/^(\d{1,2})\s*月/);
+        if (m) {
+          const mm = parseInt(m[1], 10);
+          if (mm >= 1 && mm <= 12) month = mm;
+        }
+      }
+    }
+  }
+  if (month < 1 || month > 12) month = now.getMonth() + 1;
+  const maxDay = daysInMonth(year, month);
+
+  // 找表头行：至少 5 个 1~31 的日期单元格
+  let headerIdx = -1;
+  let dayCols = {};
+  for (let i = 0; i < rows.length; i++) {
+    const map = {};
+    (rows[i] || []).forEach(function (cell, idx) {
+      const s = String(cell == null ? '' : cell).replace(/\s+/g, '');
+      let m = s.match(/^(\d{1,2})\s*[号日]?$/);
+      if (!m) m = s.match(/月\s*(\d{1,2})\s*[号日]?$/);
+      if (!m) return;
+      const d = parseInt(m[1], 10);
+      if (d >= 1 && d <= 31) map[idx] = d;
+    });
+    if (Object.keys(map).length >= 5) { headerIdx = i; dayCols = map; break; }
+  }
+  if (headerIdx < 0) return [];
+
+  const dateCols = Object.keys(dayCols).map(Number).sort(function (a, b) { return a - b; });
+  const firstDateCol = dateCols[0];
+  const nameCols = [0, 1].filter(function (c) { return c < firstDateCol; });
+  if (!nameCols.length) nameCols.push(0);
+
+  const out = [];
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const r = rows[i] || [];
+    let name = '';
+    for (const c of nameCols) {
+      const v = String(r[c] == null ? '' : r[c]).replace(/\s+/g, '').trim();
+      if (v && !/^\d+$/.test(v)) { name = v; break; }
+    }
+    if (!name) continue;
+    if (/^(合计|总计|备注|说明|分组)/.test(name)) continue;
+    const shiftRows = [];
+    for (const c of dateCols) {
+      const day = dayCols[c];
+      if (day < 1 || day > maxDay) continue;
+      const raw = cleanText(r[c]);
+      const shift = NORMALIZE[raw] || raw;
+      if (!shift) continue;
+      shiftRows.push({
+        date: year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0'),
+        shift: shift
+      });
+    }
+    if (shiftRows.length) out.push({ name: name, year: year, month: month, rows: shiftRows });
+  }
+  return out;
 }
+
+// Excel 解析：下载 xlsx → 取第一个 sheet → parseSheetRows
+async function parseExcel(fileID) {
+  const XLSX = require('xlsx');
+  const down = await cloud.downloadFile({ fileID });
+  const wb = XLSX.read(down.fileContent, { type: 'buffer' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if (!ws) return [];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+  return parseSheetRows(rows);
+}
+
+// 暴露纯函数给单元测试（不影响云函数入口）
+exports._parseSheetRows = parseSheetRows;

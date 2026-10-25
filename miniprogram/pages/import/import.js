@@ -30,11 +30,12 @@ Page({
   onChooseImage() {
     if (this.data.loading) return;
     wx.showActionSheet({
-      itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择'],
+      itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择', 'Excel 表格（.xlsx/.xls）'],
       success: (res) => {
         if (res.tapIndex === 0) this.chooseFromAlbum();
         else if (res.tapIndex === 1) this.chooseFromChatImage();
-        else this.chooseFromChat();
+        else if (res.tapIndex === 2) this.chooseFromChat();
+        else this.chooseFromExcel();
       }
     });
   },
@@ -83,6 +84,19 @@ Page({
       }
     });
   },
+  // Excel：从聊天文件里选 .xlsx/.xls，走 sourceType='excel'（不调用视觉 API）
+  chooseFromExcel() {
+    wx.chooseMessageFile({
+      count: 1,
+      type: 'file',
+      extension: ['xlsx', 'xls'],
+      success: (res) => {
+        const f = res.tempFiles[0];
+        if (f.size > 10 * 1024 * 1024) { wx.showToast({ title: '文件过大（限10MB）', icon: 'none' }); return; }
+        this.uploadAndRecognize(f.path, 'excel');
+      }
+    });
+  },
   // 上传并识别（始终识别所有人，不传 targetName）
   uploadAndRecognize(filePath, type) {
     this.setData({ loading: true, sourceType: type });
@@ -92,6 +106,9 @@ Page({
       ext = '.' + (m ? m[1].toLowerCase() : 'jpg');
       if (ext === '.jfif') ext = '.jpg';
       if (!/^\.(jpg|jpeg|png|webp|gif|bmp)$/.test(ext)) ext = '.jpg';
+    } else {
+      const m = filePath.match(/\.(xlsx|xls)$/i);
+      ext = m ? '.' + m[1].toLowerCase() : '.xlsx';
     }
     const cloudPath = 'shift-import/' + Date.now() + ext;
     wx.cloud.uploadFile({

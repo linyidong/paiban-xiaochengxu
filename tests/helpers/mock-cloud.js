@@ -102,7 +102,7 @@ function createDb(state) {
   };
 }
 
-function loadWithMock(fnPath, state) {
+function loadModuleWithMock(fnPath, state) {
   const sdk = {
     DYNAMIC_CURRENT_ENV: 'test',
     init: function () {},
@@ -116,10 +116,14 @@ function loadWithMock(fnPath, state) {
   };
   try {
     delete require.cache[require.resolve(fnPath)];
-    return require(fnPath).main;
+    return require(fnPath);
   } finally {
     Module._load = orig;
   }
 }
 
-module.exports = { createState, loadWithMock };
+function loadWithMock(fnPath, state) {
+  return loadModuleWithMock(fnPath, state).main;
+}
+
+module.exports = { createState, loadWithMock, loadModuleWithMock };
