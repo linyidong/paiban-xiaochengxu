@@ -6,13 +6,13 @@
 ## 1. 当前状态（一眼看懂）
 
 - 当前阶段：阶段 5 需求访谈与 PRD
-- 阶段状态：进行中
-- 当前门禁：G3 通过；G4 未通过（PRD 待确认）
+- 阶段状态：完成产出，待用户确认（G4）
+- 当前门禁：G3 通过；G4 待通过（等用户确认 PRD 范围与验收标准）
 - 当前任务：无
 - 任务状态：未开始
-- 下一步：访谈第 1 问——排班修改权限模型（Q-001）
-- 阻塞：权限/导入/删除/年份等产品决策待访谈；线上配置与开发者工具未授权
-- 最近更新：2026-10-25 17:40
+- 下一步：用户确认 PRD 范围（P0/P1/P2 与“不做”清单）
+- 阻塞：线上配置/数据与开发者工具授权仍未提供（Q-006/Q-010）
+- 最近更新：2026-10-25 18:05
 
 **状态行**（每次汇报第一行）：
 
@@ -29,7 +29,7 @@
 | 2 | CodeGraph 代码地图 | 已完成（降级） | `module-map.md` | 2026-10-25 |
 | 3 | 深度理解现状 | 已完成 | `tech-stack.md`、`setup-and-run.md`、`known-issues.md`、`人工参数与环境配置.md`、`project-brief.md`（草稿） | 2026-10-25 |
 | 4 | 反向恢复项目文档 | 已完成（UI 决策 B） | `architecture.md`、`feature-status.md`、`data-model.md`、`api-contract.md`、`ui-design.md`（现状）、`project-brief.md`（定稿） | 2026-10-25 |
-| 5 | 需求访谈与 PRD | 进行中 | `项目需求文档PRD.md`、`user-flows.md` | 2026-10-25 |
+| 5 | 需求访谈与 PRD | 待用户确认（G4） | `项目需求文档PRD.md`、`user-flows.md`、`ui-design.md`（目标）、`feature-status.md`（范围） | 2026-10-25 |
 | 6 | 目标架构与实施计划 | 未开始 | `target-architecture.md`、`implementation-plan.md`、`acceptance-test-plan.md` |  |
 | 7 | 逐任务开发 | 未开始 | `tasks/T-00X.md`、commit |  |
 | 8 | 验收、部署与上线 | 未开始 | 验收结果、`deployment.md` |  |
@@ -75,7 +75,8 @@
 - 2026-10-25：完成阶段 2。产出 `module-map.md`（入口、模块、4 条调用链、数据流、影响面、盲区）；CodeGraph 不可用已降级。
 - 2026-10-25：完成阶段 3。产出 `tech-stack.md`、`setup-and-run.md`、`known-issues.md`（20 缺陷 / 7 风险 / 8 技术债）、`人工参数与环境配置.md`、`project-brief.md` 草稿。
 - 2026-10-25：确认密钥 `AI识别API_KEY` 已进入 Git 跟踪（`HEAD`）；未打印值，待用户授权轮换与移出跟踪。
-- 2026-10-25：完成阶段 4 文档。产出 `architecture.md`、`feature-status.md`（12 保留 / 10 修复 / 4 未完成）、`data-model.md`、`api-contract.md`、`ui-design.md`（含实测对比度与字号统计）；`project-brief.md` 定稿；记录 D-004（UI 决策待定）、D-005（go/no-go 建议 go）。
+- 2026-10-25：完成阶段 4 文档。产出 `architecture.md`、`feature-status.md`（12 保留 / 10 修复 / 4 未完成）、`data-model.md`、`api-contract.md`、`ui-design.md`（含实测对比度与字号统计）；`project-brief.md` 定稿；记录 D-004（UI 决策 B）、D-005（go/no-go 建议 go）。
+- 2026-10-25：完成阶段 5。6 轮访谈结论落库（D-006～D-010）；产出 `项目需求文档PRD.md`（15 项 P0/P1/P2 + 2 项不做）、`user-flows.md`（5 流程）、`ui-design.md` 目标规范（新令牌实测对比度 4.83–16.28:1）、`feature-status.md` 本期范围。G4 待用户确认。
 
 ## 7. 交接摘要索引
 
@@ -86,7 +87,7 @@
 | 2 | `handover/阶段2-代码地图-交接摘要.md` | 已写 |
 | 3 | `handover/阶段3-现状理解-交接摘要.md` | 已写 |
 | 4 | `handover/阶段4-文档恢复-交接摘要.md` | 已写 |
-| 5 | `handover/阶段5-PRD-交接摘要.md` | 未写 |
+| 5 | `handover/阶段5-PRD-交接摘要.md` | 已写 |
 | 6 | `handover/阶段6-架构与计划-交接摘要.md` | 未写 |
 | 7 | `handover/阶段7-编码-交接摘要.md` | 未写 |
 | 8 | `handover/阶段8-验收上线-交接摘要.md` | 未写 |
