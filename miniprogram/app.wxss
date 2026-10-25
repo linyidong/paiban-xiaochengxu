@@ -13,6 +13,12 @@ page {
   --color-warning-strong: #92400E;
   --color-success: #166534;
   --color-primary-tint: #ECFDF5;
+  --color-blue: #1D4ED8;
+  --color-blue-tint: #EFF6FF;
+  --color-blue-tint-strong: #DBEAFE;
+  --color-blue-border: #BFDBFE;
+  --color-blue-text: #1E40AF;
+  --color-blue-text-strong: #1E3A8A;
   --color-danger-tint: #FEF2F2;
   --color-border: #E2E8E5;
 

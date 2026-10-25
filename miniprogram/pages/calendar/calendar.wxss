@@ -8,29 +8,53 @@
 }
 .member-scroll { white-space: nowrap; padding: 8rpx 24rpx; width: 100%; box-sizing: border-box; }
 .member-item {
-  display: inline-block; padding: 16rpx 28rpx; background: var(--color-surface);
+  display: inline-block; padding: 16rpx 28rpx; background: var(--color-blue-tint);
+  border: 2rpx solid var(--color-blue-border);
   border-radius: 32rpx; margin-right: 16rpx; font-size: 30rpx;
-  color: var(--color-text-secondary); min-height: 88rpx; box-sizing: border-box;
+  color: var(--color-blue-text); min-height: 88rpx; box-sizing: border-box;
 }
-.member-item.active { background: var(--color-primary); color: #FFFFFF; font-weight: 600; }
+.member-item.active {
+  background: var(--color-blue-tint-strong);
+  color: var(--color-blue-text-strong);
+  border-color: var(--color-blue);
+  font-weight: 600;
+}
 
-/* 非管理员当前成员显示 */
-.member-current { padding: 16rpx 24rpx; text-align: center; }
-.member-current-label { font-size: 30rpx; color: var(--color-text-secondary); }
-.member-current-name { font-size: 32rpx; color: var(--color-primary); font-weight: 600; }
+/* 非管理员当前成员显示：浅蓝底 */
+.member-current {
+  padding: 16rpx 24rpx;
+  margin: 8rpx 24rpx;
+  text-align: center;
+  background: var(--color-blue-tint);
+  border: 2rpx solid var(--color-blue-border);
+  border-radius: 12rpx;
+  box-sizing: border-box;
+}
+.member-current-label { font-size: 30rpx; color: var(--color-blue-text); }
+.member-current-name { font-size: 32rpx; color: var(--color-blue-text); font-weight: 600; }
 
 .cal-card { padding-bottom: 16rpx; position: relative; }
-/* 批量按钮：改为文档流内右对齐，避免固定 top 遮挡日历（BUG-018） */
+/* 批量按钮：与 31 号格同宽同列（14.28%），右边缘贴齐日期网格右边缘 */
 .multi-btn {
   display: block;
-  width: 176rpx;
+  width: 14.28%;
+  min-width: 88rpx;
   margin: 16rpx 0 0 auto;
   text-align: center;
-  font-size: 28rpx; color: var(--color-primary);
-  background: #ECFDF5; border-radius: 12rpx; padding: 12rpx 0;
-  min-height: 72rpx; box-sizing: border-box;
+  font-size: 28rpx; color: var(--color-blue-text);
+  background: var(--color-blue-tint);
+  border: 2rpx solid var(--color-blue-border);
+  border-radius: 8rpx;
+  padding: 0;
+  line-height: 68rpx;
+  min-height: 72rpx;
+  box-sizing: border-box;
 }
-.multi-btn.on { background: var(--color-primary); color: #FFFFFF; }
+.multi-btn.on {
+  background: var(--color-blue);
+  color: #FFFFFF;
+  border-color: var(--color-blue);
+}
 
 .legend { display: flex; flex-direction: column; }
 .legend-row {
