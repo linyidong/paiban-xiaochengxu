@@ -2,7 +2,7 @@
 const app = getApp();
 const cal = require('../../utils/calendar.js');
 const { getShiftColor, getShiftOptions, getDisplayName } = require('../../utils/shift.js');
-const { pickDefaultMember, selectableMembers } = require('../../utils/member.js');
+const { pickMember } = require('../../utils/member.js');
 function normalizeDigits(text) {
   text = String(text).replace(/[\uff10-\uff19]/g, function (ch) {
     return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0);
@@ -70,11 +70,13 @@ Page({
     if (pending) wx.removeStorageSync('importTarget');
     const year = pending && pending.year ? Number(pending.year) : currentYear;
     const month = pending && pending.month ? Number(pending.month) : now.getMonth() + 1;
+    // 管理员初始不锁定“管理员”伪成员，默认展示第一个真实成员；可在成员横滑中点“管理员”
+    const preferredMember = (pending && pending.name) || (session.role === 'admin' ? '' : (session.name || ''));
     this.setData({
       year: year,
       month: month,
       today: cal.getToday(),
-      selectedMember: (pending && pending.name) || session.name || '',
+      selectedMember: preferredMember,
       isAdmin: session.role === 'admin',
       tempYear: currentYear,
       yearList: yearList
@@ -106,10 +108,10 @@ Page({
           m.displayName = getDisplayName(m.name);
           return m;
         });
-        // 日历不展示管理员记录；管理员默认进入第一个真实成员
-        const members = selectableMembers(allMembers);
+        // 日历展示所有有效成员（含管理员，便于查看/编辑管理员自己的排班）
+        const members = allMembers;
         const session = wx.getStorageSync('session') || {};
-        const selectedMember = pickDefaultMember(members, this.data.selectedMember);
+        const selectedMember = pickMember(allMembers, this.data.selectedMember);
         this.setData({
           members: members,
           isAdmin: session.role === 'admin',

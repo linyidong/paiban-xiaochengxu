@@ -29,3 +29,9 @@ test('没有成员时返回空字符串', function () {
   assert.strictEqual(util.pickDefaultMember([], '甲'), '');
   assert.strictEqual(util.pickDefaultMember([{ name: '管理员', role: 'admin' }], '管理员'), '');
 });
+
+test('pickMember 允许选中管理员，默认仍取真实成员', function () {
+  assert.strictEqual(util.pickMember(members, '管理员'), '管理员');
+  assert.strictEqual(util.pickMember(members, ''), '甲');
+  assert.strictEqual(util.pickMember(members, '不存在'), '甲');
+});

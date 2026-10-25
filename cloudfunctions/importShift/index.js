@@ -164,7 +164,7 @@ exports.main = async (event) => {
       }
     }
     // “取消”是清空动作：不写入班次，但该日期仍属于本月替换范围
-    const rows = allRows.filter(function (r) { return r.shift && r.shift !== '取消'; });
+    const rows = allRows.filter(function (r) { return r.shift && r.shift !== '取消' && r.shift !== 'IEB'; });
     plans.push({ name: finalName, userId: userId, rows: rows, monthKey: monthKey });
   }
   if (!plans.length) return { ok: false, msg: '预览为空' };
@@ -267,7 +267,7 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
     '1) 只识别表格主体区域：表头日期（横排 1~31 号）+ 左侧"分组/昵称/人员"列 + 交叉单元格班次；',
     '2) 忽略表格右侧的"小提示"说明区域，不要读取任何说明文字；',
     '3) 成员名优先取"昵称"列，昵称为空则取"人员"列；姓名只输出汉字，不要输出任何符号或字母；',
-    '4) 每个单元格是一个完整班次，必须原样照抄（如：休、正、售后、A、B、正A、正B、售A、售B、IEB、年假），禁止把"正A"拆成"正"和"A"，只输出汉字或字母，禁止任何符号、图标、数字或解释；',
+    '4) 每个单元格是一个完整班次，必须原样照抄（如：休、正、售后、A、B、正A、正B、售A、售B、年假），禁止把"正A"拆成"正"和"A"，只输出汉字或字母，禁止任何符号、图标、数字或解释；',
     '5) 从标题识别年份与月份（如"2025年12月排岗表"→ year:2025, month:12）；标题没有年份时 year 输出当前年份；month 输出 1~12；',
     '6) 按当月实际天数输出 days 数组（如 2 月 28/29 项、4 月 30 项），无排班的格子填空字符串""，不得错位、不得漏天；',
     '7) 只输出紧凑 JSON 数组（不要缩进换行），不要任何解释文字，格式：[{"name":"成员名","year":2025,"month":10,"days":["售A","休","","正A"]}]'
@@ -315,7 +315,7 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
             date: year + '-' + String(month).padStart(2, '0') + '-' + String(i + 1).padStart(2, '0'),
             shift: NORMALIZE[raw] || raw
           };
-        }).filter(function (r) { return r.shift; })
+        }).filter(function (r) { return r.shift && r.shift !== 'IEB'; })
       };
     })
     .filter(function (p) { return p.name && p.rows.length; });
@@ -329,7 +329,7 @@ function cleanText(s) {
 // 常见误读归一化：识别文本 → 标准班次（售A 常被读成"售后"、正A 被读成"正"/"A"等）；未列出则保留原样
 const NORMALIZE = {
   '休': '休', '休息': '休', '休班': '休',
-  // 以下班次全部原样保留，不归一化（真实表格：VC/草本组=正/售后/A/B，综合组=正A/正B/售A/售B/IEB/年假）
+  // 以下班次全部原样保留，不归一化（真实表格：VC/草本组=正/售后/A/B，综合组=正A/正B/售A/售B/年假）
   '正': '正', '售后': '售后', 'A': 'A', 'B': 'B',
   '正A': '正A', '正B': '正B', '售A': '售A', '售B': '售B',
   'IEB': 'IEB', '年假': '年假',
@@ -575,7 +575,7 @@ function parseSheetRows(rows, yearOverride, monthOverride) {
       if (day < 1 || day > maxDay) continue;
       const raw = cleanText(r[c]);
       const shift = NORMALIZE[raw] || raw;
-      if (!shift) continue;
+      if (!shift || shift === 'IEB') continue;
       shiftRows.push({
         date: year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0'),
         shift: shift

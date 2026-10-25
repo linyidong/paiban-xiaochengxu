@@ -12,7 +12,6 @@ module.exports = {
     "正B",
     "售A",
     "售B",
-    "IEB",
     "年假"
   ],
   "SHIFT_COLOR": {
@@ -42,9 +41,9 @@ module.exports = {
     ]
   },
   "STYLE": {
-    "bg": "#F4F6F5",
+    "bg": "#F3F7FF",
     "cardBg": "#FFFFFF",
-    "primary": "#0F766E",
+    "primary": "#2563EB",
     "radiusCard": "20rpx",
     "radiusBtn": "12rpx"
   }

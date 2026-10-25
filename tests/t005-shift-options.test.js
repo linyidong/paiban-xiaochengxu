@@ -14,11 +14,16 @@ function setup(openid) {
   return { state: state, main: loadWithMock(IMPORT_FN, state) };
 }
 
-test('班次选项 = 11 种配置班次 + 取消，共 12 项', function () {
+test('班次选项 = 10 种配置班次 + 取消，共 11 项', function () {
   const opts = shiftUtil.getShiftOptions();
-  assert.strictEqual(opts.length, 12);
-  assert.strictEqual(opts[11].type, '取消');
-  assert.deepStrictEqual(opts.slice(0, 11).map(function (o) { return o.type; }), shiftUtil.SHIFT_TYPES);
+  assert.strictEqual(opts.length, 11);
+  assert.strictEqual(opts[10].type, '取消');
+  assert.deepStrictEqual(opts.slice(0, 10).map(function (o) { return o.type; }), shiftUtil.SHIFT_TYPES);
+});
+
+test('班次列表不再包含 IEB', function () {
+  assert.strictEqual(shiftUtil.SHIFT_TYPES.includes('IEB'), false);
+  assert.strictEqual(shiftUtil.getShiftOptions().some(function (o) { return o.type === 'IEB'; }), false);
 });
 
 test('班次选项不再包含旧的白班/晚班', function () {

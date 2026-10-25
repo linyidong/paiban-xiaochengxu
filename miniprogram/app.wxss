@@ -1,26 +1,26 @@
 /* 设计令牌（T-001）：所有页面共用。
    迁移说明：页面级硬编码样式在 T-013～T-015 分批替换；本文件只负责全局基座。 */
 page {
-  --color-bg: #F4F6F5;
+  --color-bg: #F3F7FF;
   --color-surface: #FFFFFF;
-  --color-text: #14231F;
-  --color-text-secondary: #4B5A55;
-  --color-text-muted: #5F6E69;
-  --color-primary: #0F766E;
-  --color-primary-strong: #115E59;
+  --color-text: #16233A;
+  --color-text-secondary: #4A5A6A;
+  --color-text-muted: #5F6F80;
+  --color-primary: #2563EB;
+  --color-primary-strong: #1D4ED8;
   --color-danger: #B91C1C;
   --color-warning: #B45309;
   --color-warning-strong: #92400E;
   --color-success: #166534;
-  --color-primary-tint: #ECFDF5;
+  --color-primary-tint: #EAF2FF;
   --color-blue: #1D4ED8;
-  --color-blue-tint: #EFF6FF;
+  --color-blue-tint: #EAF2FF;
   --color-blue-tint-strong: #DBEAFE;
   --color-blue-border: #BFDBFE;
   --color-blue-text: #1E40AF;
   --color-blue-text-strong: #1E3A8A;
   --color-danger-tint: #FEF2F2;
-  --color-border: #E2E8E5;
+  --color-border: #DFE7F2;
 
   --font-size-title: 40rpx;
   --font-size-body: 32rpx;
@@ -32,7 +32,7 @@ page {
   --space-page: 32rpx;
   --space-card: 32rpx;
 
-  --shadow-card: 0 2rpx 8rpx rgba(20, 35, 31, 0.06);
+  --shadow-card: 0 2rpx 8rpx rgba(22, 35, 58, 0.06);
 
   background: var(--color-bg);
   color: var(--color-text);
@@ -73,4 +73,4 @@ page {
   line-height: 1.4;
 }
 .btn-ghost::after { border: none; }
-.btn-ghost:active { background: #ECFDF5; }
+.btn-ghost:active { background: #EAF2FF; }

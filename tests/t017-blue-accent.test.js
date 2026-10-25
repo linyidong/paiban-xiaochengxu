@@ -30,7 +30,7 @@ function ratio(a, b) {
 test('批量按钮已进入日期网格（组件内），页面不再有独立 multi-btn', function () {
   assert.strictEqual(pageCss.includes('.multi-btn'), false);
   const b = block(compCss, '.batch-btn');
-  assert.match(b, /background:\s*#EFF6FF/i);
+  assert.match(b, /background:\s*#EAF2FF/i);
   assert.match(b, /color:\s*#1E40AF/i);
 });
 
@@ -60,7 +60,7 @@ test('成员标签/当前成员只有浅蓝底，没有边框', function () {
 });
 
 test('浅蓝组合对比度 ≥4.5:1', function () {
-  assert.ok(ratio('#1E40AF', '#EFF6FF') >= 4.5);
+  assert.ok(ratio('#1E40AF', '#EAF2FF') >= 4.5);
   assert.ok(ratio('#1E3A8A', '#DBEAFE') >= 4.5);
   assert.ok(ratio('#FFFFFF', '#1D4ED8') >= 4.5);
 });

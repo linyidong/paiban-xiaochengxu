@@ -13,4 +13,16 @@ function pickDefaultMember(members, preferredName) {
   return list.length ? list[0].name : '';
 }
 
-module.exports = { selectableMembers, pickDefaultMember };
+// 优先使用当前选中成员（允许管理员）；否则取第一个真实成员
+function pickMember(members, preferredName) {
+  const list = (members || []).filter(function (m) { return m; });
+  if (preferredName) {
+    const hit = list.filter(function (m) { return m.name === preferredName; })[0];
+    if (hit) return hit.name;
+  }
+  const real = list.filter(function (m) { return m.role !== 'admin'; });
+  if (real.length) return real[0].name;
+  return list.length ? list[0].name : '';
+}
+
+module.exports = { selectableMembers, pickDefaultMember, pickMember };
