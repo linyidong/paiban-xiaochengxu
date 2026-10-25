@@ -7,7 +7,7 @@
 
 | ID | 现象 | 复现步骤 | 证据 | 影响范围 | 严重度 | 状态 |
 |---|---|---|---|---|---|---|
-| BUG-001 | 任意登录成员可修改任意人的排班（后端零权限校验） | 任意成员在控制台调用 `wx.cloud.callFunction({name:'updateShift',data:{name:'<同事名>',shift:'休',dates:['2026-10-20']}})` → 返回 `ok:true` | `cloudfunctions/updateShift/index.js:21`（注释明写“所有登录用户均可修改排班…后端仅校验登录态”） | 全部排班数据 | 高 | 待修 |
+| BUG-001 | 任意登录成员可修改任意人的排班（后端零权限校验） | 任意成员在控制台调用 `wx.cloud.callFunction({name:'updateShift',data:{name:'<同事名>',shift:'休',dates:['2026-10-20']}})` → 返回 `ok:true` | `cloudfunctions/updateShift/index.js:21`（注释明写“所有登录用户均可修改排班…后端仅校验登录态”） | 全部排班数据 | 高 | 已修（T-002，待部署） |
 | BUG-002 | 导入写入无权限校验，且会自动创建成员 | 调用 `importShift` commit=true，`preview` 填任意姓名与日期 → 覆盖该成员排班并可能新建 user | `cloudfunctions/importShift/index.js:73-99`、`:90-99` | 全部排班 + 成员表 | 高 | 待修 |
 | BUG-003 | 普通成员无法清空某天排班（没有“取消”选项） | 非管理员打开有排班的日历 → 点某天 → 弹窗只有已用班次 + 年假 | `miniprogram/pages/calendar/calendar.js:151-178`（非管理员分支不含 `取消`） | 成员自助改班 | 高 | 待修 |
 | BUG-004 | 无法设置本月尚未出现过的班次 | 新成员只有“休” → 点日期 → 只有“休/年假” | 同 BUG-003：选项来自 `Object.keys(used)` | 成员自助改班 | 高 | 待修 |
@@ -15,7 +15,7 @@
 | BUG-006 | 导入年份/月份写死 | 导入标题为“12月排班”的截图（当前 10 月）→ 写入今年 12 月；导入去年 12 月同样写今年 | 识别阶段在 `importShift/index.js:164,180` 用 `new Date().getFullYear()` 拼日期；commit 分支 `:71` 解构出的 `year/month` 未被引用；前端传参见 `import.js:240`、`login.js:355` | 跨年/跨月导入 | 高 | 待修 |
 | BUG-007 | 导入非当月后，日历仍停在当前月，看不到结果 | 导入 11 月排班 → 成功 → 跳回日历显示 10 月 | `calendar.js:53-79`（`onShow` 重置为当前年月） | 导入体验 | 中 | 待修 |
 | BUG-008 | 备忘录跨年重复出现 | 添加“10月1号…”→ 次年 10 月日历仍显示 | `calendar.js:16-23,209-211`（只匹配月份）；`memo.js:12-16,53-65` | 备忘录 | 中 | 待修 |
-| BUG-009 | 删除成员提示与实现矛盾 | 日历页「删除成员」弹窗写“历史排班将保留”，后端实际删除 shifts | `calendar.js:242` vs `manageMember/index.js:95`；`members.js:37` 又写“排班也删除” | 数据语义/用户预期 | 中 | 待修 |
+| BUG-009 | 删除成员提示与实现矛盾 | 日历页「删除成员」弹窗写“历史排班将保留”，后端实际删除 shifts | `calendar.js:242` vs `manageMember/index.js:95`；`members.js:37` 又写“排班也删除” | 数据语义/用户预期 | 中 | 已修（T-003，待部署） |
 | BUG-010 | 灰色补位日期可直接改，且写入相邻月看不到 | 10 月视图点左上角灰色“30” → 写入 9 月 30 日 → 重载后无变化 | `calendar.wxml:6-7`（全部格子绑定 `bindtap`）；`calendar.js:272-280`（未判 `inMonth`） | 误操作/数据错位 | 中 | 待修 |
 | BUG-011 | 管理员默认进入“管理员”伪成员，空数据 | 管理员首次登录 → 日历默认选中“管理员” | `login/index.js:28`（自动建档 name=管理员）；`calendar.js:73`（默认 `session.name`） | 管理员体验 | 中 | 待修 |
 | BUG-012 | 月选择器当前月有数据时，白字浅灰底不可读 | 打开年月选择器且当前月有排班 | `calendar.wxss:122-127`：`.month-cell.current` 与 `.month-cell.has-data` 同权重，后者在后覆盖背景 | 视觉/可读性 | 中 | 待修 |
@@ -45,6 +45,7 @@
 | RISK-007 | 两套导入流程行为不一致 | `login.js:174-386` vs `import.js` | 修一处漏一处 | 合并为单一服务（阶段 7） | 待修 |
 | RISK-008 | 同人同天可能重复记录 | `shifts` 无唯一索引；`updateShift`/`importShift` 都是“先查再写”非原子 | 查询取到哪条不确定、改班看似无效 | 先查线上重复数，再决定是否加唯一约束/幂等键 | 待确认 |
 | RISK-009 | 成员改名/重名导致排班错位 | `getShifts` 用 `userId→name` 映射；改班按 `users.name` 定位 | A 的班显示在 B 名下 | 禁用重名或改用 `_id` | 待确认 |
+| RISK-010 | 软删除成员仍保留 openid | T-003 只设 `isDeleted`，不清 `openid` | 本人再次登录 `needBind` 后可绑定他人，产生同 openid 多条记录；恢复时可能冲突 | 提供“恢复成员/解绑”入口，或登录时清理已删除记录的 openid（阶段 7 后续） | 监控中 |
 
 ## 3. 技术债
 
