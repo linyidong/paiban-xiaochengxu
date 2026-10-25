@@ -11,17 +11,13 @@
         <view class="member-name">{{item.displayName}}</view>
         <view class="member-meta">
           <text class="member-role">{{item.role === 'admin' ? '管理员' : '成员'}}</text>
-          <text class="member-bindstatus {{item.openid ? 'bound' : 'unbound'}}">
-            {{item.openid ? '已绑定微信' : '未绑定'}}
+          <text class="member-bindstatus {{item.isBound ? 'bound' : 'unbound'}}">
+            {{item.isBound ? '已绑定微信' : '未绑定'}}
           </text>
-        </view>
-        <view class="member-openid" wx:if="{{item.openid}}">
-          <text class="openid-label">OpenID：</text>
-          <text class="openid-value">{{item.openid}}</text>
         </view>
       </view>
       <view class="member-actions">
-        <view class="member-action-btn unbind" wx:if="{{item.openid && item.role !== 'admin'}}"
+        <view class="member-action-btn unbind" wx:if="{{item.isBound && item.role !== 'admin'}}"
               data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onUnbind">解绑</view>
         <view class="member-action-btn remove" wx:if="{{item.role !== 'admin'}}"
               data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onRemove">移除</view>

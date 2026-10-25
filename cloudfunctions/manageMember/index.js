@@ -28,10 +28,24 @@ exports.main = async (event) => {
   // 全员可用：list / bindWechat / createAndBind
   if (action === 'list') {
     const res = await db.collection('users').orderBy('createdAt', 'asc').limit(100).get();
+    const meRes = await db.collection('users').where({ openid: OPENID }).get();
+    const me = meRes.data.filter(function (u) { return !u.isDeleted; })[0] || null;
+    const admin = await checkAdmin(OPENID);
     return {
       ok: true,
       members: res.data.filter(function (u) { return !u.isDeleted; }).map(function (u) {
-        return { _id: u._id, name: u.name, wxId: u.wxId || '', role: u.role, openid: u.openid || '', createdAt: u.createdAt };
+        const item = {
+          _id: u._id,
+          name: u.name,
+          wxId: u.wxId || '',
+          role: u.role,
+          createdAt: u.createdAt,
+          isBound: !!u.openid,
+          isSelf: !!(me && me._id === u._id)
+        };
+        // openid 仅管理员可见；普通成员只拿到布尔标记
+        if (admin) item.openid = u.openid || '';
+        return item;
       })
     };
   }

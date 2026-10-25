@@ -69,8 +69,6 @@ Page({
     });
   },
   loadMemberList() {
-    const session = wx.getStorageSync('session');
-    const myOpenid = (session && session.openid) || '';
     wx.cloud.callFunction({
       name: 'manageMember',
       data: { action: 'list' },
@@ -82,10 +80,11 @@ Page({
           const list = [];
           r.members.forEach(function (m) {
             if (!m.name) return;
-            if (myOpenid && m.openid === myOpenid) {
+            // openid 已不再下发；用 isSelf / isBound 判断
+            if (m.isSelf) {
               myBoundName = m.name;
               myBoundDisplayName = getDisplayName(m.name);
-            } else if (!m.openid) {
+            } else if (!m.isBound) {
               m.displayName = getDisplayName(m.name);
               list.push(m);
             }
