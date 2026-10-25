@@ -1,5 +1,14 @@
 .members-page { padding-bottom: 40rpx; }
-.members-title { font-size: 32rpx; font-weight: 600; margin-bottom: 24rpx; }
+.members-title { font-size: 32rpx; font-weight: 600; margin-bottom: 8rpx; }
+.members-add-toggle {
+  font-size: 28rpx; color: var(--color-primary); padding: 12rpx 0 20rpx;
+}
+.members-add-form { margin-bottom: 24rpx; }
+.members-add-input {
+  background: var(--color-bg); border-radius: 12rpx; padding: 20rpx 24rpx;
+  font-size: 32rpx; margin-bottom: 16rpx; box-sizing: border-box; width: 100%;
+}
+.members-add-btn { font-size: 32rpx; padding: 18rpx 0; }
 .member-row {
   display: flex; align-items: flex-start; justify-content: space-between;
   padding: 24rpx 0; border-bottom: 2rpx solid #F3F4F6;

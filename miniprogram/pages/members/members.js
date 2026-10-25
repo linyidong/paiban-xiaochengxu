@@ -1,7 +1,7 @@
 // 成员管理页（仅管理员可见入口；云函数二次校验）
 const { getDisplayName } = require('../../utils/shift.js');
 Page({
-  data: { members: [] },
+  data: { members: [], showAdd: false, newName: '', adding: false },
   onShow() {
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) { wx.reLaunch({ url: '/pages/login/login' }); return; }
@@ -29,8 +29,35 @@ Page({
       fail: () => wx.showToast({ title: '加载失败', icon: 'none' })
     });
   },
-  onRemove(e) {
-    const id = e.currentTarget.dataset.id;
+  onToggleAdd() {
+    this.setData({ showAdd: !this.data.showAdd, newName: '' });
+  },
+  onNewNameInput(e) {
+    this.setData({ newName: e.detail.value });
+  },
+  onAddMember() {
+    const name = (this.data.newName || '').trim();
+    if (!name) { wx.showToast({ title: '请输入成员姓名', icon: 'none' }); return; }
+    if (this.data.adding) return;
+    this.setData({ adding: true });
+    wx.cloud.callFunction({
+      name: 'manageMember',
+      data: { action: 'add', name: name },
+      success: (res) => {
+        const r = res.result || {};
+        if (r.ok) {
+          wx.showToast({ title: '已新增', icon: 'success' });
+          this.setData({ showAdd: false, newName: '' });
+          this.loadMembers();
+        } else {
+          wx.showToast({ title: r.msg || '新增失败', icon: 'none' });
+        }
+      },
+      fail: () => wx.showToast({ title: '新增失败，请重试', icon: 'none' }),
+      complete: () => this.setData({ adding: false })
+    });
+  },
+  onRemove(e) {    const id = e.currentTarget.dataset.id;
     const name = e.currentTarget.dataset.name;
     wx.showModal({
       title: '移除成员',

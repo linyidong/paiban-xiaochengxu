@@ -1,6 +1,11 @@
 <view class="members-page">
   <view class="card">
     <view class="members-title">成员列表（{{members.length}}）</view>
+    <view class="members-add-toggle" bindtap="onToggleAdd">{{showAdd ? '取消新增' : '+ 新增成员'}}</view>
+    <view class="members-add-form" wx:if="{{showAdd}}">
+      <input class="members-add-input" placeholder="输入成员姓名（与排班表一致）" value="{{newName}}" bindinput="onNewNameInput" />
+      <button class="btn-primary members-add-btn" bindtap="onAddMember" loading="{{adding}}">确认新增</button>
+    </view>
     <view class="member-row" wx:for="{{members}}" wx:key="_id">
       <view class="member-info">
         <view class="member-name">{{item.displayName}}</view>
