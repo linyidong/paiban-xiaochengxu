@@ -9,7 +9,7 @@ const db = cloud.database();
 const _ = db.command;
 
 // ⚠️ 人工参数来源：本目录 config.json（由根目录《人工必填参数清单.json》同步），勿手改
-const { AI_VISION_API_KEY, AI_VISION_ENDPOINT, AI_VISION_MODEL, MEMBER_ALIAS } = require('./config.json');
+const { AI_VISION_API_KEY, AI_VISION_ENDPOINT, AI_VISION_MODEL, MEMBER_ALIAS, ADMIN_OPENIDS } = require('./config.json');
 
 const DAYS_IN_MONTH = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
@@ -116,7 +116,9 @@ exports.main = async (event) => {
   const meRes = await db.collection('users').where({ openid: OPENID }).get();
   const me = meRes.data.filter(function (u) { return !u.isDeleted; })[0];
   if (!me) return { ok: false, msg: '用户不存在，请先登录' };
-  const isAdmin = me.role === 'admin';
+  const cleanMe = String(OPENID || '').replace(/[^a-zA-Z0-9]/g, '');
+  const adminList = (ADMIN_OPENIDS || []).map(function (s) { return String(s || '').replace(/[^a-zA-Z0-9]/g, ''); });
+  const isAdmin = adminList.indexOf(cleanMe) > -1 || me.role === 'admin';
 
   const nameToId = {};
   activeUsers.forEach(function (u) { if (u.name) nameToId[u.name] = u._id; });
