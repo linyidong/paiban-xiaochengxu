@@ -102,7 +102,6 @@ flowchart LR
 | `calendar.js:5-6` | `DEFAULT_SHIFTS` 与 `config.js` 双源 | 班次不一致 | 源码 |
 | `getShifts` | 无分页、硬 `limit(1000/2000)` | 静默截断 | `getShifts/index.js:23,45` |
 | 全项目 | 无测试、无 lock、无 CI | 回归无保障 | 文件系统 |
-| `初始设计稿.md` | 与代码漂移 | 误导接手者 | 文档对比 |
 
 ## 9. 证据来源
 

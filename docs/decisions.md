@@ -58,7 +58,7 @@
 - 日期：2026-10-25
 - 背景：现状 `updateShift`/`importShift` 后端零成员级校验，任何登录成员可改任意人排班；前端仅隐藏入口。
 - 决策：用户选择 **A——成员只能改自己，管理员可改所有人**。
-- 理由：与《初始设计稿.md》第七节的最初设计一致；后端加校验即可，前端调用参数不变，对旧版小程序兼容友好；比“临时授权”改动小。
+- 理由：与最初设计第七节的最初设计一致；后端加校验即可，前端调用参数不变，对旧版小程序兼容友好；比“临时授权”改动小。
 - 影响：
   - 阶段 7 必须修改 `cloudfunctions/updateShift/index.js` 与 `cloudfunctions/importShift/index.js`，越权返回 `{ok:false,msg}`；
   - 管理员判定复用白名单/`users.role`，需与 `manageMember.checkAdmin` 统一；

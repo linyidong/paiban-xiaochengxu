@@ -83,7 +83,7 @@
 
 | # | 风险 | 证据 | 影响 | 优先级 |
 |---|---|---|---|---|
-| 1 | 排班修改零权限校验 | `cloudfunctions/updateShift/index.js:21` 注释明写“所有登录用户均可修改排班（权限由前端控制入口）” | 任意成员可改任意人排班；与《初始设计稿》第七节冲突 | 高 |
+| 1 | 排班修改零权限校验 | `cloudfunctions/updateShift/index.js:21` 注释明写“所有登录用户均可修改排班（权限由前端控制入口）” | 任意成员可改任意人排班；与最初设计第七节冲突 | 高 |
 | 2 | 导入写入零权限校验 + 可自动建成员 | `cloudfunctions/importShift/index.js:73-99`；`miniprogram/pages/import/import.js:160-173` | 普通成员可覆盖同事整月排班、批量制造成员记录 | 高 |
 | 3 | AI Key 入库 | `人工必填参数清单.json:47`；`git ls-files` | 密钥永久留在 Git 历史，可被任何拿到仓库的人使用 | 高 |
 | 4 | 导入“假覆盖” | `importShift/index.js:100-113`（只 upsert 不删除）；`:183`（预览过滤空班次）；`import.js:233` 文案“将覆盖” | 改班后重导残留旧班次，排班错误且难发现 | 高 |
@@ -110,7 +110,7 @@
 
 ## 9. 审计清单（本阶段已完成/待补）
 
-- [x] 目录结构与项目说明（`初始设计稿.md` 已读，已确认与代码不一致）
+- [x] 目录结构与项目说明（已确认与代码不一致）
 - [x] 依赖清单与锁文件（6 个云函数 `package.json`；无 lock 文件）
 - [x] 入口、路由、组件、服务层（`app.json` 6 页面；6 云函数；1 组件）
 - [x] 数据模型（`users/shifts/memos/changeLog`）、接口（云函数入参/出参）、部署配置
@@ -122,7 +122,7 @@
 ## 10. 证据来源
 
 - 命令输出：`git status --short --branch`、`git log`、`git remote -v`、`git tag`、`git ls-files`、`git show HEAD:人工必填参数清单.json`（仅判断字段存在）、`robocopy` 汇总与 SHA256 比对、Node 脚本校验（JSON 22/22、事件处理器 0 缺失、require 0 缺失、6 云函数均被调用）
-- 文件路径：`miniprogram/**`、`cloudfunctions/**`、`初始设计稿.md`、`人工必填参数清单.md/json`、`.gitignore`、`project.config.json`
+- 文件路径：`miniprogram/**`、`cloudfunctions/**`、`人工必填参数清单.md/json`、`.gitignore`、`project.config.json`
 - 截图/日志：无（本轮未启动开发者工具）
 
 ## 11. 待确认事项

@@ -58,7 +58,6 @@
 | DEBT-004 | 全项目 | 0 个自动化测试 | 先立最小测试基线 | 阶段 6–7 |
 | DEBT-005 | `importShift/package.json` | `xlsx` 依赖未使用 | 删依赖需确认 Excel 需求（Q-007） | 阶段 7 |
 | DEBT-006 | `changeLog` | 只写不读，无查看入口 | 非当前痛点 | 阶段 9 |
-| DEBT-007 | `初始设计稿.md` | 与代码漂移（edit 页、shift-tag、白/晚班、3 集合） | 阶段 4 反向重写 | 阶段 4 |
 | DEBT-008 | `getShifts`/`users` | 无分页，靠 `limit(100/1000)` 硬顶 | 团队规模小 | 阶段 7 |
 | DEBT-009 | `pages/login/login.wxss` 与 `pages/import/import.wxss` | 预览卡片、遮罩、成员选择面板样式整段重复（190 行 vs 45 行） | 视觉迁移时会重复改两次 | 阶段 7（随 T-014） |
 

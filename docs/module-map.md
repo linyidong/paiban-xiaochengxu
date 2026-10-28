@@ -38,7 +38,7 @@
 | `cloudfunctions/importShift` | 视觉识别、姓名归位、覆盖入库、自动建成员 | 371 行 | 云函数 | **成员管理职责（越界写入 users）** |
 | `cloudfunctions/manageMember` | list/bind/create/add/remove/unbind | 112 行 | 云函数 | 导入业务 |
 | `cloudfunctions/manageMemo` | 个人备忘录 CRUD（按 openid 隔离） | 65 行 | 云函数 | 排班业务 |
-| 根目录工具 | 参数总分发、人工必填清单、项目说明 | `sync-config.py`、`人工必填参数清单.*`、`初始设计稿.md` | — | 文档已与代码漂移 |
+| 根目录工具 | 参数总分发、人工必填清单、项目说明 | `sync-config.py`、`人工必填参数清单.*` | — | 文档已与代码漂移 |
 
 ## 3. 关键业务调用链
 
