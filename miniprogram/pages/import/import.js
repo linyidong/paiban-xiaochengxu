@@ -6,6 +6,8 @@ Page({
     loading: false,
     sourceType: '',
     targetName: '',
+    // 从日历空月“导入”按钮带过来的目标成员/月份
+    prefillName: '',
     // 目标月份（提前导入用）：'YYYY-MM'，空 = 按截图识别结果入库
     targetMonth: '',
     monthRange: { start: '', end: '' },
@@ -39,6 +41,17 @@ Page({
       boundMemberDisplayName: boundMemberDisplayName,
       monthRange: { start: rangeStart, end: rangeEnd }
     });
+    // 从日历页带入：成员 + 年月；导入后自动回到该成员/月份
+    const prefill = wx.getStorageSync('importPrefill');
+    if (prefill && prefill.name) {
+      wx.removeStorageSync('importPrefill');
+      const tm = prefill.year + '-' + String(prefill.month).padStart(2, '0');
+      this.setData({
+        prefillName: prefill.name,
+        targetName: prefill.name,
+        targetMonth: tm
+      });
+    }
   },
   // 选择目标月份（提前导入未来月份 / 补录过去月份）
   onTargetMonthChange(e) {
@@ -151,7 +164,17 @@ Page({
                 p.displayName = getDisplayName(p.name);
                 return p;
               });
-              const members = fullPreview.map(function (p) { return { name: p.name, displayName: p.displayName }; });
+              // 从日历带入成员时，只保留该成员，避免导入到其他人
+              let matched = fullPreview;
+              if (this.data.prefillName) {
+                const wanted = this.data.prefillName;
+                const hit = fullPreview.filter(function (p) {
+                  return p.name === wanted || p.displayName === wanted;
+                });
+                if (hit.length) matched = hit;
+                else wx.showToast({ title: '未识别到「' + wanted + '」，请手动选择', icon: 'none' });
+              }
+              const members = matched.map(function (p) { return { name: p.name, displayName: p.displayName }; });
               // 非管理员且有已绑定成员 → 弹出绑定确认
               if (!this.data.isAdmin && this.data.boundMemberName && members.length === 1) {
                 const recognized = members[0];
@@ -166,8 +189,8 @@ Page({
               if (members.length === 1) {
                 // 只有一人 → 直接显示该人预览
                 this.setData({
-                  preview: fullPreview,
-                  fullPreview: fullPreview,
+                  preview: matched,
+                  fullPreview: matched,
                   targetName: members[0].name
                 });
                 wx.showToast({ title: '识别成功', icon: 'success' });
@@ -308,7 +331,7 @@ Page({
             const r2 = res.result || {};
             if (r2.ok) {
               wx.showToast({ title: '导入成功', icon: 'success' });
-              this.setData({ preview: null, targetName: '', targetMonth: '' });
+              this.setData({ preview: null, targetName: '', targetMonth: '', prefillName: '' });
               // 告诉日历页切换到导入的成员与月份
               let switchTo = targetName && targetName !== '全部' ? targetName : (preview[0] && preview[0].name || '');
               if (switchTo) {

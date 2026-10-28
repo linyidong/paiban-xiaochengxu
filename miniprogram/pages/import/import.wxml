@@ -3,6 +3,11 @@
     <view class="import-title">排班导入</view>
     <view class="import-desc">上传排班截图 / 表格，识别后自动生成日历</view>
 
+    <view class="prefill-tip" wx:if="{{prefillName}}">
+      <view class="prefill-title">目标：{{prefillName}} · {{targetMonth}}</view>
+      <view class="prefill-sub">上传后只保留该成员；导入成功自动回到对应月份</view>
+    </view>
+
     <!-- 目标月份：提前导入下个月（或补录过去月份）时用；不选则按截图识别结果入库 -->
     <view class="target-month">
       <view class="target-month-row">

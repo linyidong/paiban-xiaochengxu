@@ -28,7 +28,7 @@ function getToday() {
 // 在“当月最后一天”的下一个格子放批量按钮：
 // - 若最后一天不是周日，正好落在同一排右侧空格；
 // - 若最后一天是周日，则落在下一排第一个格子（仍紧随 31 号）。
-function withBatchCell(cells, label, on) {
+function withBatchCell(cells, label, on, showImport) {
   const list = (cells || []).map(function (c) { return Object.assign({}, c); });
   let last = -1;
   for (let i = 0; i < list.length; i++) { if (list[i].inMonth) last = i; }
@@ -46,6 +46,18 @@ function withBatchCell(cells, label, on) {
   const target = last + 1;
   if (target < list.length) list[target] = cell;
   else list.push(cell);
+  // 当月无排班时，在批量按钮右侧再加一个“导入”格
+  if (showImport) {
+    list.push({
+      day: '',
+      fullDate: '',
+      inMonth: false,
+      shift: '',
+      color: '',
+      isImport: true,
+      importLabel: '导入'
+    });
+  }
   return list;
 }
 module.exports = { getMonthGrid, fmtDate, getToday, withBatchCell };

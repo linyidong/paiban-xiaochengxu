@@ -18,7 +18,7 @@
   </view>
 
   <view class="cal-card card">
-    <calendar cells="{{cells}}" bind:selectday="onTapDay" bind:longpressday="onLongPressDay" bind:batch="onBatchTap" />
+    <calendar cells="{{cells}}" bind:selectday="onTapDay" bind:longpressday="onLongPressDay" bind:batch="onBatchTap" bind:import="onImportTap" />
     <!-- 无排班且无备忘录提示 -->
     <view class="empty-tip" wx:if="{{!hasData && !memos.length}}">
       <view class="empty-text">{{emptyText}}</view>

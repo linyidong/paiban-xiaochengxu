@@ -156,8 +156,11 @@ Page({
       c.color = t ? getShiftColor(t) : '';
       c.selected = sel.indexOf(c.fullDate) > -1;
     });
-    // 批量按钮放进“当月最后一天”右侧的空格，与最后一排水平对齐
-    const decorated = cal.withBatchCell(cells, this.data.multiSelect ? '完成' : '批量', this.data.multiSelect);
+    // 批量按钮放进“当月最后一天”右侧的空格；无排班时再追加“导入”格
+    const session = wx.getStorageSync('session') || {};
+    const showImport = !this.data.hasData && !this.data.multiSelect &&
+      (this.data.isAdmin || this.data.selectedMember === (session.name || ''));
+    const decorated = cal.withBatchCell(cells, this.data.multiSelect ? '完成' : '批量', this.data.multiSelect, showImport);
     this.setData({ cells: decorated });
     // 根据当前成员的实际排班数据更新图例和弹窗选项
     this.updateShiftDisplay(myMap);
@@ -316,6 +319,17 @@ Page({
     this._modeManual = true;
     this.setData({ shiftMode: mode });
     this.updateShiftDisplay();
+  },
+  // 空月“导入”按钮：带上当前成员与年月，跳到导入页
+  onImportTap() {
+    const name = this.data.selectedMember;
+    if (!name) { wx.showToast({ title: '请先选择成员', icon: 'none' }); return; }
+    wx.setStorageSync('importPrefill', {
+      name: name,
+      year: this.data.year,
+      month: this.data.month
+    });
+    wx.switchTab({ url: '/pages/import/import' });
   },
   // 日历格内的“批量/完成”按钮（组件 batch 事件）
   onBatchTap() {

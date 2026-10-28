@@ -45,3 +45,21 @@
   color: #FFFFFF;
   border-color: #1D4ED8;
 }
+/* 导入按钮：空月时出现在批量右侧 */
+.import-cell {
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.import-btn {
+  width: 100%;
+  height: 56rpx;
+  line-height: 52rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #1E40AF;
+  background: #FFFFFF;
+  border: 2rpx solid #BFDBFE;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+}
