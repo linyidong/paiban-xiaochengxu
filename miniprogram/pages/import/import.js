@@ -6,6 +6,9 @@ Page({
     loading: false,
     sourceType: '',
     targetName: '',
+    // 目标月份（提前导入用）：'YYYY-MM'，空 = 按截图识别结果入库
+    targetMonth: '',
+    monthRange: { start: '', end: '' },
     // 多人选择
     showMemberSelect: false,
     recognizedMembers: [],  // 识别到的成员列表 [{name}]
@@ -25,7 +28,24 @@ Page({
     const isAdmin = session.role === 'admin';
     const boundMemberName = session.name || '';
     const boundMemberDisplayName = getDisplayName(boundMemberName);
-    this.setData({ isAdmin: isAdmin, boundMemberName: boundMemberName, boundMemberDisplayName: boundMemberDisplayName });
+    // 月份选择范围：当前月往前 12 个月 ~ 往后 24 个月（提前排下个月班表用）
+    const now = new Date();
+    const fmt = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+    const rangeStart = fmt(new Date(now.getFullYear(), now.getMonth() - 12, 1));
+    const rangeEnd = fmt(new Date(now.getFullYear(), now.getMonth() + 24, 1));
+    this.setData({
+      isAdmin: isAdmin,
+      boundMemberName: boundMemberName,
+      boundMemberDisplayName: boundMemberDisplayName,
+      monthRange: { start: rangeStart, end: rangeEnd }
+    });
+  },
+  // 选择目标月份（提前导入未来月份 / 补录过去月份）
+  onTargetMonthChange(e) {
+    this.setData({ targetMonth: e.detail.value || '' });
+  },
+  onClearTargetMonth() {
+    this.setData({ targetMonth: '' });
   },
   onChooseImage() {
     if (this.data.loading) return;
@@ -264,29 +284,42 @@ Page({
     if (!preview || !preview.length) return;
     const targetName = this.data.targetName;
     const who = (targetName && targetName !== '全部') ? '「' + targetName + '」' : preview.length + ' 位成员';
+    const tm = this.data.targetMonth || '';   // 'YYYY-MM'；空 = 按截图识别结果
+    const monthLabel = tm ? (tm.slice(0, 4) + ' 年 ' + Number(tm.slice(5, 7)) + ' 月') : '截图识别的月份';
     wx.showModal({
       title: '确认导入',
-      content: '将覆盖 ' + who + ' 的当月排班，是否继续？',
+      content: '将覆盖 ' + who + ' 的 ' + monthLabel + ' 排班，是否继续？' + (tm ? '\n（已选月份：入库日期以所选月份为准）' : ''),
       success: (r) => {
         if (!r.confirm) return;
         wx.showLoading({ title: '导入中...' });
+        const payload = { commit: true, preview: preview };
+        if (tm) {
+          const parts = tm.split('-');
+          payload.year = Number(parts[0]);
+          payload.month = Number(parts[1]);
+          payload.overrideMonth = true;   // 以所选月份为准：识别出的月份会被重写为本月
+        }
         wx.cloud.callFunction({
           name: 'importShift',
-          // 不传当前年月：由识别结果显示的 year/month 决定
-          data: { commit: true, preview: preview },
+          // 未选月份时不传年月：由识别结果里的 year/month 决定（保持旧行为）
+          data: payload,
           success: (res) => {
             wx.hideLoading();
             const r2 = res.result || {};
             if (r2.ok) {
               wx.showToast({ title: '导入成功', icon: 'success' });
-              this.setData({ preview: null, targetName: '' });
+              this.setData({ preview: null, targetName: '', targetMonth: '' });
               // 告诉日历页切换到导入的成员与月份
               let switchTo = targetName && targetName !== '全部' ? targetName : (preview[0] && preview[0].name || '');
               if (switchTo) {
                 wx.setStorageSync('importTargetMember', switchTo);
                 const firstRow = preview[0] && preview[0].rows && preview[0].rows[0];
                 const target = { name: switchTo };
-                if (firstRow && firstRow.date) {
+                if (tm) {
+                  // 已选目标月份：以所选月份为准（云函数按此重写过日期）
+                  target.year = Number(tm.slice(0, 4));
+                  target.month = Number(tm.slice(5, 7));
+                } else if (firstRow && firstRow.date) {
                   target.year = Number(firstRow.date.slice(0, 4));
                   target.month = Number(firstRow.date.slice(5, 7));
                 }

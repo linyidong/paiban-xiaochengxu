@@ -2,6 +2,28 @@
   <view class="card">
     <view class="import-title">排班导入</view>
     <view class="import-desc">上传排班截图 / 表格，识别后自动生成日历</view>
+
+    <!-- 目标月份：提前导入下个月（或补录过去月份）时用；不选则按截图识别结果入库 -->
+    <view class="target-month">
+      <view class="target-month-row">
+        <view class="target-month-label">导入到哪个月</view>
+        <picker class="target-month-picker" mode="date" fields="month"
+                value="{{targetMonth}}" start="{{monthRange.start}}" end="{{monthRange.end}}"
+                bindchange="onTargetMonthChange">
+          <view class="target-month-value {{targetMonth ? 'is-set' : ''}}">
+            {{targetMonth ? targetMonth : '按截图识别的月份（默认）'}}
+          </view>
+        </picker>
+        <view class="target-month-clear" wx:if="{{targetMonth}}" bindtap="onClearTargetMonth">改回默认</view>
+      </view>
+      <view class="target-month-tip" wx:if="{{targetMonth}}">
+        已选 {{targetMonth}}：入库日期以所选月份为准（截图上的月份会被重写，只保留「日」）
+      </view>
+      <view class="target-month-tip" wx:else>
+        想提前导入下个月的班表？先在这里选月份，再上传截图
+      </view>
+    </view>
+
     <view class="import-actions">
       <button class="btn-primary import-btn" bindtap="onChooseImage" loading="{{loading && sourceType === 'image'}}">选择排班截图 / Excel</button>
     </view>

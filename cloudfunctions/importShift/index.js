@@ -151,7 +151,7 @@ exports.main = async (event) => {
     }
     const allRows = p.rows.filter(function (r) { return r.date; });
     if (!allRows.length) continue;
-    const monthKey = allRows[0].date.slice(0, 7);
+    let monthKey = allRows[0].date.slice(0, 7);
     if (!/^\d{4}-\d{2}$/.test(monthKey)) return { ok: false, msg: '日期格式不合法：' + allRows[0].date };
     for (const r of allRows) {
       if (r.date.slice(0, 7) !== monthKey) {
@@ -162,7 +162,24 @@ exports.main = async (event) => {
     if (eventYear && eventMonth) {
       const want = eventYear + '-' + String(eventMonth).padStart(2, '0');
       if (monthKey !== want) {
-        return { ok: false, msg: '识别月份（' + monthKey + '）与选择月份（' + want + '）不一致，请校对' };
+        // 未显式要求覆盖：保持旧行为，拒绝入库（防止识别错月份污染数据）
+        if (!event.overrideMonth) {
+          return { ok: false, msg: '识别月份（' + monthKey + '）与选择月份（' + want + '）不一致，请校对' };
+        }
+        // 用户在导入页显式选了目标月份 → 以所选月份为准：
+        // 只保留「日」，把年月重写到目标月，并校验当月天数（2 月/30 天月会自动拦住 31 号）
+        const maxDay = daysInMonth(eventYear, eventMonth);
+        for (const r of allRows) {
+          const day = parseInt(r.date.slice(8, 10), 10);
+          if (!day || day > maxDay) {
+            return {
+              ok: false,
+              msg: '截图里的日期 ' + r.date + ' 无法落到 ' + want + '（该月只有 ' + maxDay + ' 天），请先在校对区改掉'
+            };
+          }
+          r.date = want + '-' + String(day).padStart(2, '0');
+        }
+        monthKey = want;
       }
     }
     // “取消”是清空动作：不写入班次，但该日期仍属于本月替换范围
