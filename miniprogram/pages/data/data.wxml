@@ -1,0 +1,27 @@
+<view class="data-page">
+  <view class="card">
+    <view class="data-title">数据概览</view>
+    <view class="data-sub">{{year}} 年 {{month}} 月</view>
+    <view class="data-grid">
+      <view class="data-item">
+        <view class="data-num">{{memberCount}}</view>
+        <view class="data-label">成员总数</view>
+      </view>
+      <view class="data-item">
+        <view class="data-num">{{activeMembers}}</view>
+        <view class="data-label">有排班成员</view>
+      </view>
+      <view class="data-item">
+        <view class="data-num">{{shiftCount}}</view>
+        <view class="data-label">排班条数</view>
+      </view>
+      <view class="data-item">
+        <view class="data-num">{{memoCount}}</view>
+        <view class="data-label">我的备忘录</view>
+      </view>
+    </view>
+  </view>
+  <view class="card">
+    <view class="data-tip">数据来源：成员表、当月排班、我的备忘录；仅管理员可见。</view>
+  </view>
+</view>

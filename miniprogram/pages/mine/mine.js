@@ -40,6 +40,7 @@ Page({
   goMembers() { wx.navigateTo({ url: '/pages/members/members' }); },
   goSettings() { wx.navigateTo({ url: '/pages/settings/settings' }); },
   goTechstack() { wx.navigateTo({ url: '/pages/techstack/techstack' }); },
+  goData() { wx.navigateTo({ url: '/pages/data/data' }); },
   goMemo() { wx.navigateTo({ url: '/pages/memo/memo' }); },
   goBind() { wx.reLaunch({ url: '/pages/login/login' }); },
   onLogout() {
