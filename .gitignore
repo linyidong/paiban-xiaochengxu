@@ -18,3 +18,9 @@ miniprogram_dist/
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 本地真实参数（含密钥，禁止提交）
+人工必填参数清单.json
+
+# 真实排班截图（含成员姓名，不公开）
+docs/screenshots/

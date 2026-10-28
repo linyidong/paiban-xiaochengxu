@@ -108,7 +108,8 @@ test('docs 目录不含密钥与管理员 openid', function () {
   docs.forEach(function (f) {
     const text = fs.readFileSync(f, 'utf8');
     assert.strictEqual(/ark-[A-Za-z0-9-]{20,}/.test(text), false, '密钥出现在 ' + f);
-    assert.strictEqual(text.includes('o_REDACTED'), false, 'openid 出现在 ' + f);
+    // OpenID 形如 o + 27 位；示例占位符（o_your_admin_openid）不会命中
+    assert.strictEqual(/o[A-Za-z0-9_-]{27,}/.test(text), false, 'openid 出现在 ' + f);
   });
 });
 

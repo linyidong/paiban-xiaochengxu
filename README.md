@@ -1,155 +1,159 @@
 # 日历排班小程序（Calendar Shift MiniApp）
 
-给小型排班团队（门店、客服组、值班岗）用的微信小程序：**拍一张排班截图，AI 识别成结构化班表**，之后在日历上点选改班、区分管理员与成员权限、记个人备忘录。
+给小型排班团队（门店、客服组、值班岗）用的微信小程序：**拍一张排班截图，AI 识别成结构化班表**，之后每个人看自己的日历、点一下改班；管理员负责成员、导入和配置。
 
-不用 Excel 转来转去，也不用在微信群里口头换班。
+> 这不是一个“用户量很大”的产品，而是一条真实业务链路：截图 → 识别 → 校对 → 入库 → 改班 → 统计。重点是把权限、异常、数据和验收做对。
 
 ## 一、项目状态
 
 | 项 | 现状 |
 |---|---|
-| 版本 | 体验版 **1.2.1** 已上传（1.1.0 曾设为体验版）；**正式版尚未提交审核** |
-| 使用者 | **2 人**（本人 + 1 位同事），2026-10-16 起在用 |
-| 提交 | **62 次提交**，按任务编号推进（T-001 ~ T-026） |
-| 代码规模 | 8 个页面 + 7 个云函数 + 4 个云数据库集合 |
-| 测试 | **20 个测试文件**（Node 运行，含 mock 云环境，覆盖改班/权限/导入/软删除/年份/隐私等） |
-| 文档 | **31 份**（PRD、架构、数据模型、接口契约、决策记录、已知问题、验收计划 + 9 份阶段交接摘要） |
-| 缺陷治理 | 审查后确认 **25 个缺陷并逐个修复**（BUG-001 ~ BUG-025，见 `docs/known-issues.md`） |
+| 客户端 | 体验版 **1.3.4 已上传**；**1.3.5（设置页主/备模型 API Key）待上传确认**；正式版未提交审核 |
+| 使用者 | 2 名固定使用者（本人 + 1 位同事），2026-10-16 起在用 |
+| 代码规模 | 9 个页面 + 9 个云函数 + 6 个云数据库集合 |
+| 测试 | 27 个测试文件 / **134 条用例**（Node 内置 `node --test`，含云函数 mock） |
+| 文档 | 26 份 Markdown（PRD、架构、数据模型、接口、ADR、已知问题、验收、部署、操作手册、交接摘要） |
+| 任务 | T-001 ~ T-035，按任务卡推进，每次带可数验收判据 |
+| 缺陷治理 | 审查确认 25 个缺陷（4 个高危）逐个修复；验收期又修 3 个权限/月份问题（T-023、T-030、T-031） |
+| 安全 | 仓库不保存真实 API Key / 管理员 openid；参数用示例文件 + 本地同步 |
 
-> 说明：这是一个**小团队内部工具**，不是面向市场的产品，所以使用者只有 2 人。项目的重点在**把一条真实业务链路做对、做全、做可维护**，而不在用户规模。
+## 二、解决什么问题
 
-## 二、它解决什么问题
-
-排班岗的老办法是：Excel 排表 → 截图发群 → 换班在群里喊 → 月底靠人肉统计。
-
-三个真实的痛点：
+排班岗的老办法：Excel 排表 → 截图发群 → 换班在群里喊 → 月底人肉统计。三个痛点：
 
 1. **图是死的**：排班永远是别人发来的一张图，看不到自己哪天上班。
-2. **换班靠喊**：谁跟谁换了，没人留痕，月底对不上。
-3. **改一次全表重排**：一个人请假，整张表要重做一遍。
+2. **换班靠喊**：谁跟谁换了没人留痕，月底对不上。
+3. **改一次全表重排**：一个人请假，整张表重做。
 
-这个小程序把「图」变成「数据」：截图 → AI 识别 → 人工校对 → 入库成日历，之后每个人只看自己的日历、点一下就改班。
+小程序把「图」变成「数据」：截图 → AI 识别 → 人工校对 → 入库成日历，之后按成员看日历、点选改班。
 
 ## 三、核心功能
 
 | 模块 | 能力 |
 |---|---|
-| **AI 截图导入** | 上传排班截图 → 火山方舟视觉模型识别成员与每日班次 → **预览逐项人工校对** → 按「成员 + 月份」整月覆盖入库 |
-| **提前导入未来月份** | 导入页可选「导入到哪个月」（当前月 −12 ~ +24 月）。选月份后**以所选月份为准**：日期按「日」重写到目标月、校验当月天数（如 2 月自动拦住 31 号），不依赖 AI 认对月份 |
+| **AI 截图导入** | 上传排班截图 → 火山方舟视觉模型识别成员与每日班次 → 逐项人工校对 → 按「成员 + 月份」整月覆盖入库 |
+| **目标月份** | 导入页可选月份（当前月 −12 ~ +24）。用户选了月份就以该月为准：日期按「日」重写到目标月，目标月不存在的日期（如 11-31）丢弃并提示 |
+| **主/备模型** | 设置页可改主模型、备用模型及各自 API Key；主模型失败自动切备用；备用 Key 为空复用主 Key |
 | **Excel 导入** | 上传 `.xlsx`，纯函数解析出与截图一致的预览结构 |
-| **整表导入** | 管理员一次识别多成员，一次 AI 调用导入整表（省费用） |
-| 日历视图 | 月视图（周一为首列）、上下月切换、灰色补位日不可改 |
-| 改班 | 点选改班 / 长按批量改班 / 取消班次；11 种班次 + 年假 |
-| 权限 | 成员只能改自己的；管理员可改所有人、可切换成员视角 |
-| 成员管理 | 绑定已有成员、新建并绑定、软删除（保留历史排班）、解绑 |
-| 备忘录 | 个人备忘录 CRUD，按年 + 月过滤（避免跨年重复出现） |
-| 统计 | 本月休/白/晚班计数 |
-| 设置 | 管理员可见的设置页与技术栈页 |
+| **空月导入入口** | 当前成员当月无排班时，日历「批量」右侧显示「导入」；有排班/手动改班后自动隐藏 |
+| **日历与改班** | 月视图（周一为首列）、上下月切换、点选改班、长按批量、取消班次 |
+| **4/6 排班状态** | 4 状态：休/白班/晚班/年假；6 状态：休/正A/正B/售A/售B/年假；成员可按导入数据自动切 6，也可手动切换 |
+| **权限** | 成员只能改自己的；管理员可改全部、切换成员视角；管理员日历不显示“删除成员” |
+| **成员管理** | 绑定、新建并绑定、软删除（保留历史排班）、解绑 |
+| **备忘录** | 个人备忘录 CRUD，按年 + 月过滤 |
+| **数据页** | 管理员查看成员/排班/备忘录，以及用户数、使用频次、上线时长、累计用户、近 30 天活跃 |
+| **设置/技术栈** | 管理员在线改模型与 Key；技术栈页展示前后端、数据库、AI、测试与当前模型 |
 
 ## 四、技术架构
 
 ```mermaid
 flowchart LR
   U[微信用户] --> MP[小程序前端<br/>原生 WXML/WXSS/JS]
-  MP -->|wx.cloud.callFunction| CF[云函数 ×7<br/>Node.js + wx-server-sdk]
+  MP -->|wx.cloud.callFunction| CF[云函数 ×9<br/>Node.js + wx-server-sdk]
   MP -->|wx.cloud.uploadFile| CS[(云存储)]
-  CF --> DB[(云数据库<br/>users / shifts / memos / changeLog)]
-  CF -->|HTTPS| ARK[火山方舟视觉模型<br/>截图识别]
+  CF --> DB[(云数据库<br/>users / shifts / memos / changeLog / settings / usageLogs)]
+  CF -->|HTTPS| ARK[火山方舟视觉模型<br/>主/备模型]
   CF -->|getWXContext| WX[微信 OPENID]
 ```
 
 | 层 | 技术 |
 |---|---|
-| 前端 | 微信小程序原生（基础库 3.17.3），自研日历组件 |
-| 后端 | 微信云函数 ×7（Node.js + `wx-server-sdk`） |
-| 数据 | 微信云数据库，4 个集合：`users` / `shifts` / `memos` / `changeLog` |
-| 存储 | 云存储（截图上传） |
-| 外部 | 火山方舟视觉模型（截图识别，Key 不入库） |
-| 部署 | 微信开发者工具上传，云函数右键「上传并部署」 |
+| 前端 | 微信小程序原生（基础库 3.17.3），自研日历组件，CSS 变量主题 |
+| 后端 | 微信云函数 ×9（Node.js 16.13 + `wx-server-sdk`） |
+| 数据 | 云数据库 6 个集合：`users` / `shifts` / `memos` / `changeLog` / `settings` / `usageLogs` |
+| 存储 | 云存储（排班截图） |
+| 外部 | 火山方舟 Ark Chat Completions（视觉识别，支持主/备模型） |
+| 部署 | 微信开发者工具 + 云函数上传；体验版上传 |
 
 ### 云函数职责
 
 | 函数 | 职责 |
 |---|---|
-| `login` | 身份判定（OPENID）、自动建档、多记录合并 |
-| `getShifts` | 按年/月读排班与成员（已加分页） |
-| `updateShift` | 改班/清空 + 写修改日志 + **权限校验** |
-| `importShift` | 截图识别、姓名归位、整月覆盖入库、建成员 + **权限校验** |
-| `manageMember` | 成员列表/绑定/新建/移除（软删除）/解绑 + 管理员校验 |
+| `login` | 身份判定（OPENID）、自动建档、忽略软删除 |
+| `getShifts` | 按年/月读排班与成员（分页，过滤软删除） |
+| `updateShift` | 改班/清空 + 修改日志 + 权限与日期校验 |
+| `importShift` | 截图/Excel 识别、姓名归位、整月覆盖、目标月重写、主备模型回退 |
+| `manageMember` | 成员列表/绑定/新建/软删除/解绑 + 管理员校验 |
 | `manageMemo` | 个人备忘录 CRUD |
-| `manageSettings` | 管理员设置项 |
+| `manageSettings` | 管理员读写主/备模型与 API Key |
+| `getStats` | 管理员读取使用统计（累计用户/启动/近30天活跃/上线天数） |
+| `trackUsage` | 记录启动，用于使用统计（失败静默） |
 
-## 五、权限模型
+## 五、权限与安全
 
-- **身份**：微信 `OPENID`（云函数 `getWXContext()`），无独立账号体系。
-- **管理员判定**：`ADMIN_OPENIDS` 白名单 **或** 数据库 `users.role === 'admin'`。
-- **后端校验点**：`manageMember.checkAdmin`、`updateShift`（T-002）、`importShift`（T-004）。
-- **前端 `storage.session` 只用于渲染，不作为权限依据** —— 所有写操作都在云函数侧重新判定。
+- **身份**：微信 `OPENID`（`cloud.getWXContext()`），无独立账号体系。
+- **管理员**：`ADMIN_OPENIDS` 白名单优先，兼容库内 `users.role === 'admin'`。
+- **后端校验点**：`manageMember`、`updateShift`、`importShift`、`manageSettings`、`getStats`。
+- **前端 `storage.session` 只用于渲染**，所有写操作在云函数侧重新判定。
+- **密钥边界**：
+  - 仓库不提交 `cloudfunctions/*/config.json`、`project.private.config.json`、真实《人工必填参数清单.json》；
+  - 首次部署用 `人工必填参数清单.example.json` 复制后填入；
+  - 管理员可在设置页改模型与 Key（仅管理员可读），Key 存在云数据库 `settings/ai`；
+  - 不要把设置页截图发出去；泄露后立即到火山方舟重置。
 
-这套模型是审查后重建的：审查初期发现「任意登录成员都能改任意人的排班」（BUG-001），属于高危缺陷，已按「成员只能改自己、管理员可改全部、越权返回 `ok:false`」重做。
-
-## 六、数据模型（4 个集合）
+## 六、数据模型（6 个集合）
 
 | 集合 | 用途 | 关键字段 |
 |---|---|---|
-| `users` | 成员与身份 | `openid`、`name`、`role`(admin/member)、`isDeleted` |
+| `users` | 成员与身份 | `openid`、`name`、`role`、`isDeleted` |
 | `shifts` | 每人每天一条排班 | `userId`→users._id、`date`(YYYY-MM-DD)、`shiftType` |
 | `memos` | 个人备忘录 | `openid`、`text`、`createdAt` |
-| `changeLog` | 改班审计日志 | `userId`、`date`、`oldShift`、`newShift`、`operator` |
+| `changeLog` | 改班审计日志（容错写入） | `userId`、`date`、`oldShift`、`newShift` |
+| `settings` | 管理员设置 | `primaryModel`、`primaryApiKey`、`fallbackModel`、`fallbackApiKey` |
+| `usageLogs` | 启动埋点 | `openid`、`event`、`day`、`createdAt` |
 
-## 七、工程过程（这个项目真正做了什么）
+## 七、本地运行
 
-1. **先审计**：对既有代码做现状盘点（`docs/architecture.md`、`module-map.md`、`existing-project-audit.md`），只记录代码里已经存在的事实。
-2. **列缺陷**：确认 25 个缺陷（含 4 个高危：零权限校验、导入越界建成员、导入不覆盖、年份写死）与 10 项风险。
-3. **按任务修**：每个缺陷一个任务编号（T-001 ~ T-026），每次修复带可数验收判据。
-4. **补测试**：20 个测试文件，覆盖权限越权（T-002 9 条 / T-004 11 条）、软删除、年份、Excel 解析、隐私字段等。
-5. **出文档**：31 份文档，含 9 份阶段交接摘要 —— 换个人接手能直接读完继续做。
-6. **发版**：云函数 7/7 部署，客户端体验版上传，2 名使用者真实在用。
+1. 安装微信开发者工具，导入本目录（`project.config.json` 已配 `miniprogramRoot` 与 `cloudfunctionRoot`）。
+2. 复制参数模板：`人工必填参数清单.example.json` → `人工必填参数清单.json`，填写云环境、管理员 openid、AI Key/端点/模型等。
+3. 双击《同步参数.bat》或运行 `python sync-config.py`，生成 `miniprogram/config.js` 与各云函数 `config.json`。
+4. 在云开发控制台创建集合：`users` / `shifts` / `memos` / `changeLog` / `settings` / `usageLogs`（`changeLog` 可按需）。
+5. 右键 `cloudfunctions/` 下 9 个函数 → 上传并部署（云端安装依赖）。
+6. 管理员：把 OPENID 填进 `ADMIN_OPENIDS`，或把库内 `users.role` 改为 `admin`。
+7. 运行测试：`node --test`（134 条）。
+
+更细的日常操作、部署、排障见 [docs/操作手册.md](docs/操作手册.md)。
 
 ## 八、已知限制（诚实清单）
 
 | 限制 | 说明 |
 |---|---|
-| 规模未验证 | 只有 2 名使用者；成员数 × 31 天超过 1000 行时需要分页（已实现，待线上复测） |
-| 无唯一索引 | `shifts` 未加 `(userId, date)` 唯一约束，并发下理论上可能出现同人同天多条（RISK-008） |
+| 规模未验证 | 2 名使用者；成员数 × 31 天超 1000 行时分页已实现，待更大规模复测 |
+| 无唯一索引 | `shifts` 未加 `(userId, date)` 唯一约束，并发下理论可能重复（RISK-008） |
 | 修改日志只写不读 | `changeLog` 有写入，暂无查询界面 |
 | 无 CI/CD | 部署靠开发者工具手动上传 |
-| 正式版未提交审核 | 体验版可用，正式版仍在准备 |
-| 视觉识别依赖外部模型 | 识别结果必须人工校对；未建截图回归样例集（RISK-006） |
+| 正式版未审核 | 体验版可用；正式版仍待提交 |
+| 识别依赖外部模型 | 识别结果必须人工校对；未建截图回归样例集（RISK-006） |
+| 使用统计从接入起 | `usageLogs` 从 2026-10-28 接入，历史访问无法追溯 |
 
-## 九、本地运行
+## 九、工程过程
 
-1. 安装微信开发者工具，导入本目录（`project.config.json` 已配好 `miniprogramRoot` 与 `cloudfunctionRoot`）。
-2. 开通云开发环境，把环境 ID 写入 `miniprogram/config.js`。
-3. 右键 `cloudfunctions/` 下 7 个函数 → 「上传并部署（云端安装依赖）」。
-4. 截图导入需要视觉模型：把端点与 Key 写入 `cloudfunctions/importShift/config.json`（**该文件不入库**，缺失时导入会明确报失败，不会返回假数据）。
-5. 云数据库建 4 个集合：`users` / `shifts` / `memos` / `changeLog`。
-6. 管理员：把自己的 OPENID 填进 `login` 函数的 `ADMIN_OPENIDS`，或把库内 `users.role` 改为 `admin`。
+1. **先审计**：读现有代码，记录事实（`existing-project-audit.md` / `architecture.md` / `module-map.md`）。
+2. **列缺陷**：25 个确认缺陷（4 个高危）+ 10 项风险，写复现步骤与证据行号。
+3. **按任务修**：T-001 ~ T-035，一个任务一个验收判据；小步提交。
+4. **补测试**：27 个测试文件 / 134 条，覆盖权限越权、软删除、导入覆盖、目标月份、隐私、使用统计等。
+5. **出文档**：PRD、架构、数据模型、接口、ADR、验收、部署、操作手册、阶段交接。
+6. **发版**：9 个云函数部署，体验版 1.3.4 上传，2 名使用者真实在用。
 
-## 十、目录结构
-
-```
-miniprogram/                 # 小程序前端（8 个页面 + 自研日历组件 + utils）
-  pages/                     # calendar / import / login / members / memo / mine / settings / techstack
-  components/calendar/       # 自研月历组件
-  utils/                     # calendar.js（月网格）/ shift.js（班次常量与颜色）
-cloudfunctions/              # 7 个云函数（Node.js）
-  login/ getShifts/ updateShift/ importShift/ manageMember/ manageMemo/ manageSettings
-tests/                       # 20 个测试文件 + mock 云环境
-docs/                        # 31 份文档（PRD / 架构 / 数据模型 / 接口契约 / 决策 / 已知问题 / 交接摘要）
-sync-config.py               # 参数分发：清单 → 前端与云函数配置
-```
-
-## 十一、文档索引
+## 十、文档索引
 
 | 想知道什么 | 看哪份 |
 |---|---|
-| 要做什么、为什么 | `docs/项目需求文档PRD.md` |
-| 现有代码长什么样 | `docs/architecture.md`、`docs/module-map.md` |
-| 数据结构 | `docs/data-model.md` |
-| 接口约定 | `docs/api-contract.md` |
-| 为什么这么改 | `docs/decisions.md`（ADR） |
-| 有哪些坑 | `docs/known-issues.md` |
-| 怎么验收 | `docs/acceptance-test-plan.md` |
-| 怎么部署 | `docs/deployment.md` |
-| 经验教训 | `docs/lessons.md` |
+| 日常怎么操作 | [docs/操作手册.md](docs/操作手册.md) |
+| 要做什么、为什么 | [docs/项目需求文档PRD.md](docs/项目需求文档PRD.md) |
+| 代码结构 | [docs/architecture.md](docs/architecture.md)、[docs/module-map.md](docs/module-map.md) |
+| 数据结构 | [docs/data-model.md](docs/data-model.md) |
+| 接口约定 | [docs/api-contract.md](docs/api-contract.md) |
+| 为什么这么改 | [docs/decisions.md](docs/decisions.md) |
+| 有哪些坑 | [docs/known-issues.md](docs/known-issues.md) |
+| 怎么验收 | [docs/acceptance-test-plan.md](docs/acceptance-test-plan.md) |
+| 怎么部署 | [docs/deployment.md](docs/deployment.md) |
+| 内部材料 | [docs/内部就绪.md](docs/内部就绪.md)、[docs/内部-一页case.md](docs/内部-一页case.md) |
+
+## 十一、AI 参与边界
+
+编码由 AI 辅助执行；**数据模型、权限判断、异常处理、验收测试由作者把关**。本项目 25 个审查缺陷里 4 个高危（零权限校验、导入越界建成员、导入不覆盖、年份写死）都落在这三处，因此这部分不接受“AI 说通过”。
+
+## 十二、License
+
+见 [LICENSE](LICENSE)。源码公开用于作品展示与代码审阅，未经许可不得商用或再分发。
