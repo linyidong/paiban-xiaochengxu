@@ -12,7 +12,7 @@
 | 使用者 | 2 名固定使用者（本人 + 1 位同事），2026-10-16 起在用 |
 | 代码规模 | 9 个页面 + 9 个云函数 + 6 个云数据库集合 |
 | 测试 | 28 个测试文件 / **140 条用例**（Node 内置 `node --test`，含云函数 mock） |
-| 文档 | 27 份 Markdown（PRD、架构、数据模型、接口、ADR、已知问题、验收、部署、操作手册、交接摘要） |
+| 文档 | 25 份 Markdown（PRD、架构、数据模型、接口、ADR、已知问题、验收、部署、操作手册、交接摘要） |
 | 任务 | T-001 ~ T-036，按任务卡推进，每次带可数验收判据 |
 | 缺陷治理 | 审查确认 25 个缺陷（4 个高危）逐个修复；验收期又修 3 个权限/月份问题（T-023、T-030、T-031） |
 | 安全 | 仓库不保存真实 API Key / 管理员 openid；参数用示例文件 + 本地同步 |
@@ -165,7 +165,6 @@ flowchart LR
 | 有哪些坑 | [docs/known-issues.md](docs/known-issues.md) |
 | 怎么验收 | [docs/acceptance-test-plan.md](docs/acceptance-test-plan.md) |
 | 怎么部署 | [docs/deployment.md](docs/deployment.md) |
-| 内部材料 | [docs/内部就绪.md](docs/内部就绪.md)、[docs/内部-一页case.md](docs/内部-一页case.md) |
 
 ## 十一、AI 参与边界
 
