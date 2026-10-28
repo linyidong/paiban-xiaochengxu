@@ -37,17 +37,20 @@ test('10 月导入 11 月班表：显式选月份 + overrideMonth 时，日期�
   assert.strictEqual(ctx.state.shifts.some(function (s) { return s.date.slice(0, 7) === '2026-10'; }), false);
 });
 
-test('不选月份时行为不变：识别月份与所选月份不一致则拒绝', async function () {
+test('旧客户端未带 overrideMonth 时，仍按显式选择的月份重写（兼容 1.2.x）', async function () {
   const ctx = setup('o-member-1');
   const r = await ctx.main({
     commit: true,
     year: 2026,
     month: 11,
-    preview: [{ name: '甲', rows: rows(['2026-10-01']) }]
+    preview: [{ name: '甲', rows: rows(['2025-12-01', '2025-12-02']) }]
   });
-  assert.strictEqual(r.ok, false);
-  assert.match(r.msg, /不一致/);
-  assert.strictEqual(ctx.state.shifts.length, 0);
+  assert.strictEqual(r.ok, true, r.msg);
+  assert.strictEqual(r.monthRewritten, true);
+  assert.deepStrictEqual(
+    ctx.state.shifts.map(function (s) { return s.date; }).sort(),
+    ['2026-11-01', '2026-11-02']
+  );
 });
 
 test('重写到 2 月时，31 号被拦住（该月只有 28 天）', async function () {

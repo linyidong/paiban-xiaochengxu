@@ -92,7 +92,7 @@ test('非法日期 2026-02-31 被拒绝', async function () {
   assert.strictEqual(ctx.state.shifts.length, 0);
 });
 
-test('选择月份与预览月份不一致时拒绝', async function () {
+test('选择月份与预览月份不一致时按所选月份重写', async function () {
   const ctx = setup('o-member-1');
   const r = await ctx.main({
     commit: true,
@@ -100,8 +100,8 @@ test('选择月份与预览月份不一致时拒绝', async function () {
     month: 12,
     preview: [{ name: '甲', rows: rows(['2026-10-01']) }]
   });
-  assert.strictEqual(r.ok, false);
-  assert.match(r.msg, /不一致/);
+  assert.strictEqual(r.ok, true, r.msg);
+  assert.strictEqual(ctx.state.shifts[0].date, '2025-12-01');
 });
 
 test('管理员可自动登记新成员并写入排班', async function () {

@@ -125,6 +125,7 @@ exports.main = async (event) => {
   const usersNames = activeUsers.map(function (u) { return u.name; });
   const formalSet2 = Object.keys(MEMBER_ALIAS || {});
 
+  let monthRewritten = false;
   // 先整体校验（姓名/权限/月份/日期），全部通过后再写库，避免部分写入
   const plans = [];
   for (const p of preview) {
@@ -162,11 +163,8 @@ exports.main = async (event) => {
     if (eventYear && eventMonth) {
       const want = eventYear + '-' + String(eventMonth).padStart(2, '0');
       if (monthKey !== want) {
-        // 未显式要求覆盖：保持旧行为，拒绝入库（防止识别错月份污染数据）
-        if (!event.overrideMonth) {
-          return { ok: false, msg: '识别月份（' + monthKey + '）与选择月份（' + want + '）不一致，请校对' };
-        }
-        // 用户在导入页显式选了目标月份 → 以所选月份为准：
+        // 用户已在导入页显式选择目标月份 → 以所选月份为准。
+        // 不再要求 overrideMonth：兼容 1.2.x 旧客户端（它们会选月份但不带该标记）。
         // 只保留「日」，把年月重写到目标月，并校验当月天数（2 月/30 天月会自动拦住 31 号）
         const maxDay = daysInMonth(eventYear, eventMonth);
         for (const r of allRows) {
@@ -180,6 +178,7 @@ exports.main = async (event) => {
           r.date = want + '-' + String(day).padStart(2, '0');
         }
         monthKey = want;
+        monthRewritten = true;
       }
     }
     // “取消”是清空动作：不写入班次，但该日期仍属于本月替换范围
@@ -260,6 +259,7 @@ exports.main = async (event) => {
     added: added,
     updated: updated,
     removed: removed,
+    monthRewritten: monthRewritten,
     msg: msg,
     newMembers: newAdded
   };
