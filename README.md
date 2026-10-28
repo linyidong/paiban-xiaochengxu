@@ -12,7 +12,7 @@
 | 使用者 | 2 名固定使用者（本人 + 1 位同事），2026-10-16 起在用 |
 | 代码规模 | 9 个页面 + 9 个云函数 + 6 个云数据库集合 |
 | 测试 | 28 个测试文件 / **140 条用例**（Node 内置 `node --test`，含云函数 mock） |
-| 文档 | 26 份 Markdown（PRD、架构、数据模型、接口、ADR、已知问题、验收、部署、操作手册、交接摘要） |
+| 文档 | 27 份 Markdown（PRD、架构、数据模型、接口、ADR、已知问题、验收、部署、操作手册、交接摘要） |
 | 任务 | T-001 ~ T-036，按任务卡推进，每次带可数验收判据 |
 | 缺陷治理 | 审查确认 25 个缺陷（4 个高危）逐个修复；验收期又修 3 个权限/月份问题（T-023、T-030、T-031） |
 | 安全 | 仓库不保存真实 API Key / 管理员 openid；参数用示例文件 + 本地同步 |
@@ -43,6 +43,22 @@
 | **备忘录** | 个人备忘录 CRUD，按年 + 月过滤 |
 | **数据页** | 管理员查看成员/排班/备忘录，以及用户数、使用频次、上线时长、累计用户、近 30 天活跃 |
 | **设置/技术栈** | 管理员在线改模型与 Key；技术栈页展示前后端、数据库、AI、测试与当前模型 |
+
+## 功能截图
+
+> 截图为演示数据：成员名统一显示为「成员B」，管理员显示为「管理员」，**真实姓名已隐藏**；设置页含 API Key，不在公开截图中展示。
+
+<p align="center">
+  <img src="docs/showcase/01-日历-成员视图与导入入口.png" width="230" alt="日历" />
+  <img src="docs/showcase/02-导入-识别结果预览.png" width="230" alt="导入预览" />
+  <img src="docs/showcase/03-成员管理-改名.png" width="230" alt="成员管理" />
+</p>
+<p align="center">
+  <img src="docs/showcase/04-我的-功能入口.png" width="230" alt="我的" />
+  <img src="docs/showcase/05-数据-使用统计.png" width="230" alt="数据" />
+</p>
+
+完整功能说明与每页说明见 [docs/功能说明.md](docs/功能说明.md)。
 
 ## 四、技术架构
 
@@ -140,6 +156,7 @@ flowchart LR
 | 想知道什么 | 看哪份 |
 |---|---|
 | 日常怎么操作 | [docs/操作手册.md](docs/操作手册.md) |
+| 先看页面和功能 | [docs/功能说明.md](docs/功能说明.md) |
 | 要做什么、为什么 | [docs/项目需求文档PRD.md](docs/项目需求文档PRD.md) |
 | 代码结构 | [docs/architecture.md](docs/architecture.md)、[docs/module-map.md](docs/module-map.md) |
 | 数据结构 | [docs/data-model.md](docs/data-model.md) |
