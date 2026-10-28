@@ -1,22 +1,28 @@
 <view class="settings-page">
   <view class="card">
     <view class="set-title">AI 识别模型</view>
-    <view class="set-hint">主模型失败时会自动尝试备用模型；API Key 仍由云端配置保管，不下发到客户端。</view>
+    <view class="set-hint">主模型失败时会自动尝试备用模型；API Key 仅管理员可见，保存后立即生效。请勿截图分享。</view>
 
     <view class="set-field">
-      <view class="set-label">主模型</view>
+      <view class="set-label">主模型名称</view>
       <input class="set-input" value="{{primaryModel}}" bindinput="onPrimaryInput" placeholder="例如 doubao-..." />
     </view>
 
     <view class="set-field">
-      <view class="set-label">备用模型（可空）</view>
+      <view class="set-label">主模型 API Key</view>
+      <input class="set-input" value="{{primaryApiKey}}" bindinput="onPrimaryKeyInput" placeholder="填写 API Key" />
+    </view>
+
+    <view class="set-field">
+      <view class="set-label">备用模型名称（可空）</view>
       <input class="set-input" value="{{fallbackModel}}" bindinput="onFallbackInput" placeholder="主模型失败时自动使用" />
     </view>
 
-    <button class="btn-primary set-save" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存设置</button>
-  </view>
+    <view class="set-field">
+      <view class="set-label">备用模型 API Key（可空；空则复用主 Key）</view>
+      <input class="set-input" value="{{fallbackApiKey}}" bindinput="onFallbackKeyInput" placeholder="填写备用模型 API Key" />
+    </view>
 
-  <view class="card">
-    <view class="mine-link" bindtap="goTechstack">查看技术栈 →</view>
+    <button class="btn-primary set-save" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存设置</button>
   </view>
 </view>

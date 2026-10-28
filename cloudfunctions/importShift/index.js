@@ -277,31 +277,45 @@ exports.main = async (event) => {
 // 读取管理员在“设置”里保存的模型（settings/ai）；读取失败则回退 config 默认值
 async function getModelSettings() {
   let primaryModel = AI_VISION_MODEL;
+  let primaryApiKey = AI_VISION_API_KEY;
   let fallbackModel = AI_VISION_FALLBACK_MODEL || '';
+  let fallbackApiKey = '';
   try {
     const r = await db.collection('settings').doc('ai').get();
     const d = r.data || {};
     if (d.primaryModel) primaryModel = d.primaryModel;
+    if (d.primaryApiKey) primaryApiKey = d.primaryApiKey;
     if (d.fallbackModel !== undefined) fallbackModel = d.fallbackModel || '';
+    if (d.fallbackApiKey !== undefined) fallbackApiKey = d.fallbackApiKey || '';
   } catch (e) { /* settings 未创建/读取失败：用 config 默认 */ }
-  return { primaryModel: primaryModel, fallbackModel: fallbackModel };
+  return {
+    primaryModel: primaryModel,
+    primaryApiKey: primaryApiKey,
+    fallbackModel: fallbackModel,
+    fallbackApiKey: fallbackApiKey
+  };
 }
 
-// 模型候选：主模型优先，备用模型去重后追加
-function modelCandidates(primaryModel, fallbackModel) {
+// 模型候选：主模型优先，备用模型去重后追加；备用 Key 为空时复用主 Key
+function modelCandidates(primaryModel, primaryApiKey, fallbackModel, fallbackApiKey) {
   const list = [];
-  [primaryModel, fallbackModel].forEach(function (m) {
-    const v = String(m || '').trim();
-    if (v && list.indexOf(v) === -1) list.push(v);
-  });
+  const add = function (model, key) {
+    const m = String(model || '').trim();
+    if (!m || list.some(function (x) { return x.model === m; })) return;
+    list.push({ model: m, apiKey: String(key || '').trim() });
+  };
+  add(primaryModel, primaryApiKey);
+  add(fallbackModel, fallbackApiKey || primaryApiKey);
   return list;
 }
 
 async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
   // 端点/Key/模型未配置 → 直接报错（禁止回退假数据，避免污染排班）
   const modelCfg = await getModelSettings();
-  const candidates = modelCandidates(modelCfg.primaryModel, modelCfg.fallbackModel);
-  if (!candidates.length || !isVisionConfigured(AI_VISION_API_KEY, AI_VISION_ENDPOINT, candidates[0])) {
+  const candidates = modelCandidates(
+    modelCfg.primaryModel, modelCfg.primaryApiKey, modelCfg.fallbackModel, modelCfg.fallbackApiKey
+  ).filter(function (c) { return isVisionConfigured(c.apiKey, AI_VISION_ENDPOINT, c.model); });
+  if (!candidates.length) {
     throw new Error('识别服务未配置（API Key/端点/模型），请联系管理员');
   }
   // 1. 下载图片
@@ -340,7 +354,7 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
   let lastErr = null;
   for (let mi = 0; mi < candidates.length; mi++) {
     try {
-      content = await callVisionWithRetry(base64, promptText, 3, candidates[mi]);
+      content = await callVisionWithRetry(base64, promptText, 3, candidates[mi].model, candidates[mi].apiKey);
       lastErr = null;
       break;
     } catch (e) {
@@ -491,10 +505,10 @@ function editDistance(a, b) {
 }
 
 // 带重试的视觉识别调用：服务过载/限流（429/5xx）自动退避重试，其他错误直接抛出
-async function callVisionWithRetry(imageBase64, promptText, retries, model) {
+async function callVisionWithRetry(imageBase64, promptText, retries, model, apiKey) {
   for (let i = 1; i <= retries; i++) {
     try {
-      return await callVisionAPI(imageBase64, promptText, model);
+      return await callVisionAPI(imageBase64, promptText, model, apiKey);
     } catch (e) {
       const msg = String(e.message || '');
       const retriable = /overload|too many|rate limit|busy|繁忙|过载|限流|429|503/i.test(msg);
@@ -506,7 +520,7 @@ async function callVisionWithRetry(imageBase64, promptText, retries, model) {
 }
 
 // 调用火山方舟 ark chat/completions（Node https 实现，零依赖）
-function callVisionAPI(imageBase64, promptText, model) {
+function callVisionAPI(imageBase64, promptText, model, apiKey) {
   return new Promise(function (resolve, reject) {
     const body = JSON.stringify({
       model: model,
@@ -532,7 +546,7 @@ function callVisionAPI(imageBase64, promptText, model) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + AI_VISION_API_KEY,
+        'Authorization': 'Bearer ' + apiKey,
         'Content-Length': Buffer.byteLength(body)
       }
     }, function (res) {
@@ -663,3 +677,4 @@ async function parseExcel(fileID) {
 // 暴露纯函数给单元测试（不影响云函数入口）
 exports._parseSheetRows = parseSheetRows;
 exports._isVisionConfigured = isVisionConfigured;
+exports._modelCandidates = modelCandidates;

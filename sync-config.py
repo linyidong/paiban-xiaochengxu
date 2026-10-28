@@ -42,7 +42,7 @@ with open(os.path.join(root, "cloudfunctions", "importShift", "config.json"), "w
     f.write(vision_cfg)
 print("OK cloudfunctions/importShift/config.json")
 
-settings_cfg = json.dumps({"ADMIN_OPENIDS": cf["管理员openid白名单"], "AI_VISION_MODEL": cf["AI识别模型"], "AI_VISION_FALLBACK_MODEL": cf["AI识别备用模型"], "AI_VISION_ENDPOINT": cf["AI识别端点"]}, ensure_ascii=False, indent=2)
+settings_cfg = json.dumps({"ADMIN_OPENIDS": cf["管理员openid白名单"], "AI_VISION_API_KEY": cf["AI识别API_KEY"], "AI_VISION_MODEL": cf["AI识别模型"], "AI_VISION_FALLBACK_MODEL": cf["AI识别备用模型"], "AI_VISION_ENDPOINT": cf["AI识别端点"]}, ensure_ascii=False, indent=2)
 d = os.path.join(root, "cloudfunctions", "manageSettings")
 os.makedirs(d, exist_ok=True)
 with open(os.path.join(d, "config.json"), "w", encoding="utf-8") as f:

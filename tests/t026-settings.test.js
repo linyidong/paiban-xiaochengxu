@@ -14,28 +14,36 @@ function setup(openid) {
   return { state: state, main: loadWithMock(FN, state) };
 }
 
-test('管理员读取默认模型（config）', async function () {
+test('管理员读取默认模型与 API Key（config）', async function () {
   const ctx = setup('o-admin');
   const r = await ctx.main({ action: 'get' });
   assert.strictEqual(r.ok, true);
   assert.ok(r.primaryModel);
+  assert.ok(r.primaryApiKey);
   assert.strictEqual(r.source, 'config');
 });
 
-test('管理员保存主/备模型后可读回', async function () {
+test('管理员保存主/备模型与各自 Key 后可读回', async function () {
   const ctx = setup('o-admin');
-  const r = await ctx.main({ action: 'save', primaryModel: 'model-a', fallbackModel: 'model-b' });
+  const r = await ctx.main({
+    action: 'save',
+    primaryModel: 'model-a', primaryApiKey: 'key-primary-123',
+    fallbackModel: 'model-b', fallbackApiKey: 'key-fallback-456'
+  });
   assert.strictEqual(r.ok, true);
   const g = await ctx.main({ action: 'get' });
   assert.strictEqual(g.primaryModel, 'model-a');
+  assert.strictEqual(g.primaryApiKey, 'key-primary-123');
   assert.strictEqual(g.fallbackModel, 'model-b');
+  assert.strictEqual(g.fallbackApiKey, 'key-fallback-456');
   assert.strictEqual(g.source, 'db');
 });
 
-test('非法模型名/备用与主相同被拒绝', async function () {
+test('非法模型名/备用与主相同/缺主 Key 被拒绝', async function () {
   const ctx = setup('o-admin');
-  assert.strictEqual((await ctx.main({ action: 'save', primaryModel: 'bad model' })).ok, false);
-  assert.strictEqual((await ctx.main({ action: 'save', primaryModel: 'm', fallbackModel: 'm' })).ok, false);
+  assert.strictEqual((await ctx.main({ action: 'save', primaryModel: 'bad model', primaryApiKey: 'key-primary-123' })).ok, false);
+  assert.strictEqual((await ctx.main({ action: 'save', primaryModel: 'm', primaryApiKey: 'key-primary-123', fallbackModel: 'm' })).ok, false);
+  assert.strictEqual((await ctx.main({ action: 'save', primaryModel: 'm' })).ok, false);
 });
 
 test('非管理员不能读取或保存设置', async function () {
