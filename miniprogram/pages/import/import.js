@@ -1,5 +1,6 @@
 // 排班导入页：上传截图/表格 → 识别 → 单人自动导入 / 多人询问选谁 → 预览校对 → 确认入库
 const { getDisplayName } = require('../../utils/shift.js');
+const { normalizePreviewToMonth } = require('../../utils/month.js');
 Page({
   data: {
     preview: null,  // [{name, rows:[{date, shift}]}]
@@ -10,6 +11,8 @@ Page({
     prefillName: '',
     // 目标月份（提前导入用）：'YYYY-MM'，空 = 按截图识别结果入库
     targetMonth: '',
+    // 预览按目标月份重写后的提示（如忽略 12-31）
+    previewNote: '',
     monthRange: { start: '', end: '' },
     // 多人选择
     showMemberSelect: false,
@@ -55,10 +58,22 @@ Page({
   },
   // 选择目标月份（提前导入未来月份 / 补录过去月份）
   onTargetMonthChange(e) {
-    this.setData({ targetMonth: e.detail.value || '' });
+    const tm = e.detail.value || '';
+    if (tm && this.data.preview) {
+      const n = normalizePreviewToMonth(this.data.preview, tm);
+      const full = this.data.fullPreview ? normalizePreviewToMonth(this.data.fullPreview, tm) : null;
+      this.setData({
+        targetMonth: tm,
+        preview: n.preview,
+        fullPreview: full ? full.preview : this.data.fullPreview,
+        previewNote: n.dropped ? ('已按 ' + tm + ' 重写日期；忽略 ' + n.dropped + ' 天（该月不存在）') : ''
+      });
+      return;
+    }
+    this.setData({ targetMonth: tm });
   },
   onClearTargetMonth() {
-    this.setData({ targetMonth: '' });
+    this.setData({ targetMonth: '', previewNote: '' });
   },
   onChooseImage() {
     if (this.data.loading) return;
@@ -148,14 +163,23 @@ Page({
       cloudPath: cloudPath,
       filePath: filePath,
       success: (up) => {
+        const data = {
+          fileID: up.fileID,
+          sourceType: type,
+          // 成员只识别自己那一行（省 token、防串列）；管理员识别整表，后续可选人或全部
+          targetName: this.data.isAdmin ? '' : (this.data.boundMemberName || '')
+        };
+        // 目标月份也传给识别阶段：让 AI 直接按该月天数输出，避免识别成别的年月
+        const tm = this.data.targetMonth || '';
+        if (tm) {
+          const parts = tm.split('-');
+          data.year = Number(parts[0]);
+          data.month = Number(parts[1]);
+          data.overrideMonth = true;
+        }
         wx.cloud.callFunction({
           name: 'importShift',
-          data: {
-            fileID: up.fileID,
-            sourceType: type,
-            // 成员只识别自己那一行（省 token、防串列）；管理员识别整表，后续可选人或全部
-            targetName: this.data.isAdmin ? '' : (this.data.boundMemberName || '')
-          },
+          data: data,
           success: (res) => {
             const r = res.result || {};
             if (r.ok && r.preview && r.preview.length) {
@@ -164,11 +188,17 @@ Page({
                 p.displayName = getDisplayName(p.name);
                 return p;
               });
+              // 预览统一重写到目标月份；目标月不存在的日期（如 11-31）直接丢弃
+              const monthAdjusted = normalizePreviewToMonth(fullPreview, tm);
+              const previewAll = monthAdjusted.preview;
+              const previewNote = monthAdjusted.dropped
+                ? ('已按 ' + tm + ' 重写日期；忽略 ' + monthAdjusted.dropped + ' 天（该月不存在）')
+                : '';
               // 从日历带入成员时，只保留该成员，避免导入到其他人
-              let matched = fullPreview;
+              let matched = previewAll;
               if (this.data.prefillName) {
                 const wanted = this.data.prefillName;
-                const hit = fullPreview.filter(function (p) {
+                const hit = previewAll.filter(function (p) {
                   return p.name === wanted || p.displayName === wanted;
                 });
                 if (hit.length) matched = hit;
@@ -179,7 +209,8 @@ Page({
               if (!this.data.isAdmin && this.data.boundMemberName && members.length === 1) {
                 const recognized = members[0];
                 this.setData({
-                  fullPreview: fullPreview,
+                  fullPreview: previewAll,
+                  previewNote: previewNote,
                   showBindConfirm: true,
                   bindConfirmRecognizedName: recognized.name,
                   bindConfirmRecognizedDisplayName: recognized.displayName
@@ -191,6 +222,7 @@ Page({
                 this.setData({
                   preview: matched,
                   fullPreview: matched,
+                  previewNote: previewNote,
                   targetName: members[0].name
                 });
                 wx.showToast({ title: '识别成功', icon: 'success' });
@@ -200,7 +232,8 @@ Page({
                 this.setData({
                   showMemberSelect: true,
                   recognizedMembers: members,
-                  fullPreview: fullPreview
+                  fullPreview: previewAll,
+                  previewNote: previewNote
                 });
               }
             } else {
@@ -303,11 +336,22 @@ Page({
     this.setData({ preview: preview });
   },
   onConfirm() {
-    const preview = this.data.preview;
+    let preview = this.data.preview;
     if (!preview || !preview.length) return;
     const targetName = this.data.targetName;
-    const who = (targetName && targetName !== '全部') ? '「' + targetName + '」' : preview.length + ' 位成员';
     const tm = this.data.targetMonth || '';   // 'YYYY-MM'；空 = 按截图识别结果
+    // 提交前再按目标月份归一化一次（兜底旧预览/手动改月份）
+    if (tm) {
+      const n = normalizePreviewToMonth(preview, tm);
+      if (n.rewritten || n.dropped) {
+        preview = n.preview;
+        this.setData({
+          preview: preview,
+          previewNote: n.dropped ? ('已按 ' + tm + ' 重写日期；忽略 ' + n.dropped + ' 天（该月不存在）') : this.data.previewNote
+        });
+      }
+    }
+    const who = (targetName && targetName !== '全部') ? '「' + targetName + '」' : preview.length + ' 位成员';
     const monthLabel = tm ? (tm.slice(0, 4) + ' 年 ' + Number(tm.slice(5, 7)) + ' 月') : '截图识别的月份';
     wx.showModal({
       title: '确认导入',

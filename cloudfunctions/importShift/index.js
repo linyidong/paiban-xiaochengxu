@@ -126,6 +126,7 @@ exports.main = async (event) => {
   const formalSet2 = Object.keys(MEMBER_ALIAS || {});
 
   let monthRewritten = false;
+  let droppedDays = 0;
   // 先整体校验（姓名/权限/月份/日期），全部通过后再写库，避免部分写入
   const plans = [];
   for (const p of preview) {
@@ -160,29 +161,28 @@ exports.main = async (event) => {
       }
       if (!isValidDate(r.date)) return { ok: false, msg: '日期不合法：' + r.date };
     }
+    let rowsForPlan = allRows;
     if (eventYear && eventMonth) {
       const want = eventYear + '-' + String(eventMonth).padStart(2, '0');
       if (monthKey !== want) {
         // 用户已在导入页显式选择目标月份 → 以所选月份为准。
         // 不再要求 overrideMonth：兼容 1.2.x 旧客户端（它们会选月份但不带该标记）。
-        // 只保留「日」，把年月重写到目标月，并校验当月天数（2 月/30 天月会自动拦住 31 号）
+        // 只保留「日」，把年月重写到目标月；目标月不存在的日期（如 11-31）直接丢弃并计数。
         const maxDay = daysInMonth(eventYear, eventMonth);
+        const kept = [];
         for (const r of allRows) {
           const day = parseInt(r.date.slice(8, 10), 10);
-          if (!day || day > maxDay) {
-            return {
-              ok: false,
-              msg: '截图里的日期 ' + r.date + ' 无法落到 ' + want + '（该月只有 ' + maxDay + ' 天），请先在校对区改掉'
-            };
-          }
+          if (!day || day > maxDay) { droppedDays += 1; continue; }
           r.date = want + '-' + String(day).padStart(2, '0');
+          kept.push(r);
         }
+        rowsForPlan = kept;
         monthKey = want;
         monthRewritten = true;
       }
     }
     // “取消”是清空动作：不写入班次，但该日期仍属于本月替换范围
-    const rows = allRows.filter(function (r) { return r.shift && r.shift !== '取消' && r.shift !== 'IEB'; });
+    const rows = rowsForPlan.filter(function (r) { return r.shift && r.shift !== '取消' && r.shift !== 'IEB'; });
     plans.push({ name: finalName, userId: userId, rows: rows, monthKey: monthKey });
   }
   if (!plans.length) return { ok: false, msg: '预览为空' };
@@ -250,15 +250,17 @@ exports.main = async (event) => {
 
   const count = added + updated;
   const summary = '新增 ' + added + '、更新 ' + updated + '、清空 ' + removed;
+  const dropNote = droppedDays ? ('；忽略 ' + droppedDays + ' 天（目标月不存在）') : '';
   const msg = newAdded.length
-    ? ('已自动登记新成员：' + newAdded.join('、') + '；' + summary)
-    : ('导入完成：' + summary);
+    ? ('已自动登记新成员：' + newAdded.join('、') + '；' + summary + dropNote)
+    : ('导入完成：' + summary + dropNote);
   return {
     ok: true,
     count: count,
     added: added,
     updated: updated,
     removed: removed,
+    dropped: droppedDays,
     monthRewritten: monthRewritten,
     msg: msg,
     newMembers: newAdded
@@ -316,6 +318,12 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
     '6) 按当月实际天数输出 days 数组（如 2 月 28/29 项、4 月 30 项），无排班的格子填空字符串""，不得错位、不得漏天；',
     '7) 只输出紧凑 JSON 数组（不要缩进换行），不要任何解释文字，格式：[{"name":"成员名","year":2025,"month":10,"days":["售A","休","","正A"]}]'
   ];
+  // 用户已选目标月份：直接告诉模型按该月输出，避免把 2026-11 识别成 2025-12
+  const yO = parseInt(yearOverride, 10) || 0;
+  const mO = parseInt(monthOverride, 10) || 0;
+  if (yO && mO) {
+    promptLines.push('⚠️ 本次导入目标月份是 ' + yO + ' 年 ' + mO + ' 月：year 必须输出 ' + yO + '，month 必须输出 ' + mO + '，days 只输出该月实际天数（' + daysInMonth(yO, mO) + ' 项），不要按标题里的其他年月输出。');
+  }
   // 关键：如果指定了目标成员，只锁定那一行，忽略其他所有人（防止串列/错乱）
   if (targetName && targetName.trim() && targetName.trim() !== '全部') {
     const tn = targetName.trim();

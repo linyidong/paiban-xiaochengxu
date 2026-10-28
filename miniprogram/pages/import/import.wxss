@@ -14,6 +14,15 @@
 .import-btn { margin-bottom: 20rpx; }
 .preview-title { font-size: 36rpx; font-weight: 600; margin-bottom: 8rpx; color: var(--color-text); }
 .preview-tip { color: var(--color-warning); font-size: 28rpx; margin-bottom: 24rpx; }
+.preview-month-note {
+  color: var(--color-blue-text);
+  background: var(--color-blue-tint);
+  border: 2rpx solid var(--color-blue-border);
+  border-radius: 12rpx;
+  padding: 14rpx 18rpx;
+  font-size: 26rpx;
+  margin-bottom: 20rpx;
+}
 .member-preview { margin-bottom: 28rpx; }
 .member-name { font-size: 32rpx; font-weight: 500; margin-bottom: 12rpx; color: var(--color-text); }
 .shift-tags { display: flex; flex-wrap: wrap; }

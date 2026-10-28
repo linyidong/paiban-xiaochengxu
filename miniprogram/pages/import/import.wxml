@@ -68,6 +68,7 @@
   <view class="card" wx:if="{{preview}}">
     <view class="preview-title">识别结果预览<text wx:if="{{targetName && targetName !== '全部'}}">（{{targetName}}）</text></view>
     <view class="preview-tip">识别可能有误差，点按班次可循环切换，确认后再入库</view>
+    <view class="preview-month-note" wx:if="{{previewNote}}">{{previewNote}}</view>
     <view class="member-preview" wx:for="{{preview}}" wx:key="name" wx:for-index="idx">
       <view class="member-name">{{item.displayName}}<text wx:if="{{item.displayName !== item.name}}">（{{item.name}}）</text></view>
       <view class="shift-tags">

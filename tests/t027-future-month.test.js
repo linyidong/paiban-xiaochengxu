@@ -53,18 +53,18 @@ test('旧客户端未带 overrideMonth 时，仍按显式选择的月份重写�
   );
 });
 
-test('重写到 2 月时，31 号被拦住（该月只有 28 天）', async function () {
+test('重写到 2 月时，31 号被丢弃而不是整次拒绝', async function () {
   const ctx = setup('o-member-1');
   const r = await ctx.main({
     commit: true,
     year: 2026,
     month: 2,
     overrideMonth: true,
-    preview: [{ name: '甲', rows: rows(['2026-10-31']) }]
+    preview: [{ name: '甲', rows: rows(['2026-10-28', '2026-10-31']) }]
   });
-  assert.strictEqual(r.ok, false);
-  assert.match(r.msg, /只有 28 天/);
-  assert.strictEqual(ctx.state.shifts.length, 0);
+  assert.strictEqual(r.ok, true, r.msg);
+  assert.strictEqual(r.dropped, 1);
+  assert.deepStrictEqual(ctx.state.shifts.map(function (s) { return s.date; }), ['2026-02-28']);
 });
 
 test('选月份与识别一致时正常入库，且不会被误重写', async function () {
