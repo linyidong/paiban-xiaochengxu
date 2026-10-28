@@ -114,6 +114,30 @@ exports.main = async (event) => {
     return { ok: true };
   }
 
+  if (action === 'rename') {
+    const id = event.id;
+    const newName = String(event.newName || '').trim();
+    if (!id) return { ok: false, msg: '缺少成员id' };
+    if (!newName) return { ok: false, msg: '请输入新名字' };
+    if (newName.length > 20) return { ok: false, msg: '名字最多 20 个字符' };
+    if (/[\u0000-\u001f]/.test(newName)) return { ok: false, msg: '名字不能包含控制字符' };
+    const target = await db.collection('users').doc(id).get().catch(function () { return { data: null }; });
+    if (!target.data || target.data.isDeleted) return { ok: false, msg: '成员不存在' };
+    if (target.data.role === 'admin') return { ok: false, msg: '不能修改管理员名字' };
+    if (target.data.name === newName) return { ok: true, unchanged: true, name: newName };
+    const oldName = target.data.name;
+    const dup = await db.collection('users').where({ name: newName }).get();
+    const others = dup.data.filter(function (u) { return u._id !== id; });
+    if (others.length) {
+      const deleted = others.filter(function (u) { return u.isDeleted; });
+      return { ok: false, msg: deleted.length ? '该姓名已存在（可能已删除）' : '该姓名已存在' };
+    }
+    await db.collection('users').doc(id).update({
+      data: { name: newName, updatedAt: db.serverDate() }
+    });
+    return { ok: true, name: newName, oldName: oldName };
+  }
+
   if (action === 'remove') {
     const id = event.id;
     if (!id) return { ok: false, msg: '缺少id' };

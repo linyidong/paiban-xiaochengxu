@@ -31,3 +31,15 @@
 }
 .member-action-btn.unbind { color: var(--color-warning-strong); background: #FEF3C7; }
 .member-action-btn.remove { color: var(--color-danger); background: var(--color-danger-tint); }
+.member-action-btn.rename { color: var(--color-blue-text); background: var(--color-blue-tint); }
+.member-action-btn.save { color: #FFFFFF; background: var(--color-primary); }
+.member-action-btn.cancel { color: var(--color-text-secondary); background: var(--color-bg); }
+.member-rename-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-primary);
+  border-radius: 10rpx;
+  padding: 14rpx 18rpx;
+  font-size: 32rpx;
+  color: var(--color-text);
+}

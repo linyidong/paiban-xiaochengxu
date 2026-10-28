@@ -2,7 +2,7 @@
 const { getDisplayName } = require('../../utils/shift.js');
 const { selectableMembers } = require('../../utils/member.js');
 Page({
-  data: { members: [], showAdd: false, newName: '', adding: false },
+  data: { members: [], showAdd: false, newName: '', adding: false, editingId: '', editingName: '', renaming: false },
   onShow() {
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) { wx.reLaunch({ url: '/pages/login/login' }); return; }
@@ -57,6 +57,42 @@ Page({
       },
       fail: () => wx.showToast({ title: '新增失败，请重试', icon: 'none' }),
       complete: () => this.setData({ adding: false })
+    });
+  },
+  onStartRename(e) {
+    this.setData({
+      editingId: e.currentTarget.dataset.id,
+      editingName: e.currentTarget.dataset.name || ''
+    });
+  },
+  onRenameInput(e) {
+    this.setData({ editingName: e.detail.value });
+  },
+  onCancelRename() {
+    this.setData({ editingId: '', editingName: '', renaming: false });
+  },
+  onSaveRename(e) {
+    const id = e.currentTarget.dataset.id;
+    const name = String(this.data.editingName || '').trim();
+    if (!id) return;
+    if (!name) { wx.showToast({ title: '请输入新名字', icon: 'none' }); return; }
+    if (this.data.renaming) return;
+    this.setData({ renaming: true });
+    wx.cloud.callFunction({
+      name: 'manageMember',
+      data: { action: 'rename', id: id, newName: name },
+      success: (res) => {
+        const r = res.result || {};
+        if (r.ok) {
+          wx.showToast({ title: r.unchanged ? '名字未变化' : '已修改', icon: 'success' });
+          this.setData({ editingId: '', editingName: '', renaming: false });
+          this.loadMembers();
+        } else {
+          wx.showToast({ title: r.msg || '修改失败', icon: 'none' });
+        }
+      },
+      fail: () => wx.showToast({ title: '修改失败，请重试', icon: 'none' }),
+      complete: () => this.setData({ renaming: false })
     });
   },
   onRemove(e) {    const id = e.currentTarget.dataset.id;
