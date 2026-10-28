@@ -24,4 +24,32 @@
   <view class="card">
     <view class="data-tip">数据来源：成员表、当月排班、我的备忘录；仅管理员可见。</view>
   </view>
+
+  <view class="card">
+    <view class="data-title">使用数据</view>
+    <view class="data-sub">自接入统计起；上线时长按最早成员记录</view>
+    <view class="data-grid">
+      <view class="data-item">
+        <view class="data-num">{{boundCount}}</view>
+        <view class="data-label">用户数（已绑定）</view>
+      </view>
+      <view class="data-item">
+        <view class="data-num">{{launchCount}}</view>
+        <view class="data-label">使用频次（启动）</view>
+      </view>
+      <view class="data-item">
+        <view class="data-num">{{onlineDays}}</view>
+        <view class="data-label">上线时长（天）</view>
+      </view>
+      <view class="data-item">
+        <view class="data-num">{{totalUsers}}</view>
+        <view class="data-label">累计用户数</view>
+      </view>
+      <view class="data-item">
+        <view class="data-num">{{active30}}</view>
+        <view class="data-label">最近30天活跃</view>
+      </view>
+    </view>
+    <view class="data-tip" wx:if="{{firstDate}}">统计起点：{{firstDate}}</view>
+  </view>
 </view>

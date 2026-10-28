@@ -75,6 +75,7 @@ function createDb(state) {
       return {
         where: function (cond) { return query(cond); },
         get: async function () { return { data: arr.slice() }; },
+        count: async function () { return { total: arr.length }; },
         orderBy: function () { return query({}); },
         limit: function (n) { return query({}, 0, n); },
         skip: function (n) { return query({}, n, Infinity); },

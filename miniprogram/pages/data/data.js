@@ -4,6 +4,13 @@ Page({
     year: 0,
     month: 0,
     memberCount: 0,
+    boundCount: 0,
+    totalUsers: 0,
+    launchCount: 0,
+    frequency: 0,
+    active30: 0,
+    onlineDays: 0,
+    firstDate: '',
     activeMembers: 0,
     shiftCount: 0,
     memoCount: 0,
@@ -32,7 +39,31 @@ Page({
       data: { action: 'list' },
       success: (res) => {
         const r = res.result || {};
-        if (r.ok) self.setData({ memberCount: (r.members || []).length });
+        if (r.ok) {
+          const list = r.members || [];
+          self.setData({
+            memberCount: list.length,
+            boundCount: list.filter(function (m) { return m.isBound; }).length
+          });
+        }
+      }
+    });
+    // 使用统计：累计用户/启动次数/近30天活跃/上线天数
+    wx.cloud.callFunction({
+      name: 'getStats',
+      data: {},
+      success: (res) => {
+        const r = res.result || {};
+        if (r.ok) {
+          self.setData({
+            totalUsers: r.totalUsers || 0,
+            launchCount: r.launchCount || 0,
+            frequency: r.frequency || 0,
+            active30: r.active30 || 0,
+            onlineDays: r.onlineDays || 0,
+            firstDate: r.firstDate || ''
+          });
+        }
       }
     });
     // 当月排班：条数 + 有排班成员数

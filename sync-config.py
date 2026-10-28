@@ -48,4 +48,11 @@ os.makedirs(d, exist_ok=True)
 with open(os.path.join(d, "config.json"), "w", encoding="utf-8") as f:
     f.write(settings_cfg)
 print("OK cloudfunctions/manageSettings/config.json")
+
+stats_cfg = json.dumps({"ADMIN_OPENIDS": cf["管理员openid白名单"]}, ensure_ascii=False, indent=2)
+d = os.path.join(root, "cloudfunctions", "getStats")
+os.makedirs(d, exist_ok=True)
+with open(os.path.join(d, "config.json"), "w", encoding="utf-8") as f:
+    f.write(stats_cfg)
+print("OK cloudfunctions/getStats/config.json")
 print("分发完成：改参数后双击《同步参数.bat》，再重新部署云函数即可生效")

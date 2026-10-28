@@ -19,5 +19,15 @@ App({
       this.globalData.role = session.role || 'member';
       this.globalData.name = session.name || '';
     }
+    // 使用统计：每次启动记一条（失败不影响使用）
+    this.trackUsage();
+  },
+  trackUsage() {
+    if (!wx.cloud) return;
+    wx.cloud.callFunction({
+      name: 'trackUsage',
+      data: { event: 'launch' },
+      fail: function () {}
+    });
   }
 });
