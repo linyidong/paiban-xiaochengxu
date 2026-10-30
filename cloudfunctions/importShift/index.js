@@ -95,10 +95,18 @@ exports.main = async (event) => {
   }
 
   // ---------- 第二步：确认入库（按成员 + 月份全量替换） ----------
-  const { preview } = event;
+  let preview = event.preview;
   const eventYear = parseInt(event.year, 10) || 0;
   const eventMonth = parseInt(event.month, 10) || 0;
   if (!preview || !preview.length) return { ok: false, msg: '预览为空' };
+  // 前端指定了目标成员时，服务端再锁定一次，绝不覆盖其他成员
+  if (event.targetName) {
+    const t = translateAlias(String(event.targetName).trim());
+    preview = preview.filter(function (p) {
+      return p.name === t || translateAlias(p.name) === t;
+    });
+    if (!preview.length) return { ok: false, msg: '预览不包含目标成员「' + event.targetName + '」，已取消导入' };
+  }
   if (preview.length > 100) return { ok: false, msg: '一次最多导入 100 位成员' };
   const usersRes = await db.collection('users').limit(100).get();
   // 软删除成员不参与匹配/自动登记；同名已删除成员必须由管理员先恢复

@@ -188,22 +188,31 @@ Page({
                 p.displayName = getDisplayName(p.name);
                 return p;
               });
-              // 预览统一重写到目标月份；目标月不存在的日期（如 11-31）直接丢弃
-              const monthAdjusted = normalizePreviewToMonth(fullPreview, tm);
+              // 从日历带入成员时，只保留该成员，避免导入到其他人；
+              // 未命中必须中止，绝不能回退到「识别到的第一个人」。
+              let matched = fullPreview;
+              if (this.data.prefillName) {
+                const wanted = this.data.prefillName;
+                const hit = fullPreview.filter(function (p) {
+                  return p.name === wanted || p.displayName === wanted;
+                });
+                if (!hit.length) {
+                  this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
+                  wx.showModal({
+                    title: '未识别到目标成员',
+                    content: '目标成员是「' + wanted + '」，但这次识别结果里没有该成员。请重新上传，或确认截图是否对应这个人。',
+                    showCancel: false
+                  });
+                  return;
+                }
+                matched = hit;
+              }
+              // 先锁定成员，再按目标月归一化；避免把其他人的日期也计入“忽略天数”
+              const monthAdjusted = normalizePreviewToMonth(matched, tm);
               const previewAll = monthAdjusted.preview;
               const previewNote = monthAdjusted.dropped
                 ? ('已按 ' + tm + ' 重写日期；忽略 ' + monthAdjusted.dropped + ' 天（该月不存在）')
                 : '';
-              // 从日历带入成员时，只保留该成员，避免导入到其他人
-              let matched = previewAll;
-              if (this.data.prefillName) {
-                const wanted = this.data.prefillName;
-                const hit = previewAll.filter(function (p) {
-                  return p.name === wanted || p.displayName === wanted;
-                });
-                if (hit.length) matched = hit;
-                else wx.showToast({ title: '未识别到「' + wanted + '」，请手动选择', icon: 'none' });
-              }
               const members = matched.map(function (p) { return { name: p.name, displayName: p.displayName }; });
               // 非管理员且有已绑定成员 → 弹出绑定确认
               if (!this.data.isAdmin && this.data.boundMemberName && members.length === 1) {
@@ -340,6 +349,15 @@ Page({
     if (!preview || !preview.length) return;
     const targetName = this.data.targetName;
     const tm = this.data.targetMonth || '';   // 'YYYY-MM'；空 = 按截图识别结果
+    // 防御：目标成员与预览成员不一致时禁止提交，避免覆盖错人
+    if (targetName && targetName !== '全部' && preview.length === 1 && preview[0].name !== targetName) {
+      wx.showModal({
+        title: '成员不一致',
+        content: '目标是「' + targetName + '」，但预览是「' + preview[0].name + '」。请重新识别，不能覆盖其他成员。',
+        showCancel: false
+      });
+      return;
+    }
     // 提交前再按目标月份归一化一次（兜底旧预览/手动改月份）
     if (tm) {
       const n = normalizePreviewToMonth(preview, tm);
@@ -360,6 +378,7 @@ Page({
         if (!r.confirm) return;
         wx.showLoading({ title: '导入中...' });
         const payload = { commit: true, preview: preview };
+        if (targetName && targetName !== '全部') payload.targetName = targetName;
         if (tm) {
           const parts = tm.split('-');
           payload.year = Number(parts[0]);

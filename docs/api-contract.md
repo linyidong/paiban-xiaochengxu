@@ -83,7 +83,8 @@
 | 名称 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `preview` | array | 是 | 第一步结果（前端可改） |
-| `year` / `month` | number | 否 | **当前服务端完全忽略**，年份取 `new Date().getFullYear()` |
+| `targetName` | string | 否 | 目标成员；服务端再次锁定，不在预览中直接拒绝 |
+| `year` / `month` | number | 否 | 目标年月；服务端按该月天数重写/截断 |
 
 - 第二步成功：`{ ok:true, count, msg, newMembers:[name] }`
 - 错误：`缺少文件`、`识别失败：…`、`未识别到「X」的排班。本表识别到成员：…`、`未识别到排班内容…`、`预览为空`

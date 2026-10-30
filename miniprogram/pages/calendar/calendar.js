@@ -185,14 +185,16 @@ Page({
       return String(myMap[d] || '').replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '').trim();
     }).filter(Boolean);
     this._modeManual = false;
+    const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
+    // 必须先同步 hasData，再 applyShifts；否则从有排班成员切到空月时，
+    // showImport 仍读到上一个人的 hasData=true，管理员空月不会出现“导入”。
     this.setData({
       selectedMember: name,
       selectedIsAdmin: !!(m && m.role === 'admin'),
-      shiftMode: detectShiftMode(used, !!(m && m.role === 'admin'))
+      shiftMode: detectShiftMode(used, !!(m && m.role === 'admin')),
+      hasData: hasData
     });
     this.applyShifts();
-    const hasData = Object.keys(myMap).some(function (d) { return myMap[d]; });
-    this.setData({ hasData: hasData });
     this._loadMemosForMonth(hasData);
   },
   _loadMemosForMonth(hasData) {
