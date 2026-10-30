@@ -197,11 +197,47 @@ Page({
                   return p.name === wanted || p.displayName === wanted;
                 });
                 if (!hit.length) {
-                  this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
+                  // 目标昵称与排班表里的真实姓名可能不同（如「东子」vs「吴义芳」）。
+                  // 只有识别结果恰好一人时才让用户显式确认“把这行导入到目标成员”，
+                  // 绝不自动猜，也不回退到其他人。
+                  const only = fullPreview.length === 1 ? fullPreview[0] : null;
+                  if (!only) {
+                    this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
+                    wx.showModal({
+                      title: '未识别到目标成员',
+                      content: '目标成员是「' + wanted + '」，识别结果里没有该成员，且识别到多人。请重新上传或先选择正确成员。',
+                      showCancel: false
+                    });
+                    return;
+                  }
+                  const onlyName = only.displayName || only.name;
                   wx.showModal({
-                    title: '未识别到目标成员',
-                    content: '目标成员是「' + wanted + '」，但这次识别结果里没有该成员。请重新上传，或确认截图是否对应这个人。',
-                    showCancel: false
+                    title: '成员名不一致',
+                    content: '目标成员是「' + wanted + '」，排班表识别到的是「' + onlyName + '」。' +
+                      '如果这是同一个人，可以把「' + onlyName + '」的排班导入到「' + wanted + '」。',
+                    confirmText: '按' + wanted + '导入',
+                    cancelText: '取消',
+                    success: (r) => {
+                      if (!r.confirm) {
+                        this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
+                        return;
+                      }
+                      const mapped = Object.assign({}, only, {
+                        name: wanted,
+                        displayName: getDisplayName(wanted)
+                      });
+                      const adjusted = normalizePreviewToMonth([mapped], tm);
+                      const note = '识别到「' + onlyName + '」，已按「' + wanted + '」导入' +
+                        (adjusted.dropped ? '；忽略 ' + adjusted.dropped + ' 天（该月不存在）' : '');
+                      this.setData({
+                        preview: adjusted.preview,
+                        fullPreview: adjusted.preview,
+                        targetName: wanted,
+                        previewNote: note
+                      });
+                      wx.showToast({ title: '已按目标成员导入', icon: 'success' });
+                      setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
+                    }
                   });
                   return;
                 }
