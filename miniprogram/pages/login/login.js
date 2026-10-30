@@ -72,7 +72,7 @@ Page({
   loadMemberList() {
     wx.cloud.callFunction({
       name: 'manageMember',
-      data: { action: 'list' },
+      data: { action: 'list', bindable: true },
       success: (res) => {
         const r = res.result || {};
         if (r.members) {

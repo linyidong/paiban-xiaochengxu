@@ -31,9 +31,15 @@ exports.main = async (event) => {
     const meRes = await db.collection('users').where({ openid: OPENID }).get();
     const me = meRes.data.filter(function (u) { return !u.isDeleted; })[0] || null;
     const admin = await checkAdmin(OPENID);
+    const bindable = event.bindable === true;
     return {
       ok: true,
-      members: res.data.filter(function (u) { return !u.isDeleted && u.role !== 'admin'; }).map(function (u) {
+      members: res.data.filter(function (u) {
+        if (u.isDeleted || u.role === 'admin') return false;
+        // 绑定页只返回未绑定成员；当前用户自己的记录也返回（用于展示“当前已绑定”）
+        if (bindable && u.openid && u.openid !== OPENID) return false;
+        return true;
+      }).map(function (u) {
         const item = {
           _id: u._id,
           name: u.name,
@@ -61,10 +67,21 @@ exports.main = async (event) => {
     }
     const doc = active[0];
     if (doc.role === 'admin') return { ok: false, msg: '管理员账号不能绑定' };
-    if (doc.openid && doc.openid !== OPENID) return { ok: false, msg: '该成员已被其他用户绑定，请联系管理员解绑' };
-    await db.collection('users').doc(doc._id).update({
+    if (doc.openid === OPENID) {
+      return { ok: true, openid: OPENID, name: doc.name, role: doc.role || 'member' };
+    }
+    if (doc.openid) return { ok: false, msg: '该成员已被其他用户绑定，请联系管理员解绑' };
+    // 条件更新：只有 openid 仍为空时才绑定成功，避免两个用户同时抢同一个成员
+    const upd = await db.collection('users').where({ _id: doc._id, openid: '' }).update({
       data: { openid: OPENID, role: doc.role || 'member' }
     });
+    if (!upd.stats || upd.stats.updated !== 1) {
+      const fresh = await db.collection('users').doc(doc._id).get().catch(function () { return { data: null }; });
+      if (fresh.data && fresh.data.openid === OPENID) {
+        return { ok: true, openid: OPENID, name: fresh.data.name, role: fresh.data.role || 'member' };
+      }
+      return { ok: false, msg: '该成员刚刚已被其他用户绑定，请刷新后重试' };
+    }
     return { ok: true, openid: OPENID, name: doc.name, role: doc.role || 'member' };
   }
 

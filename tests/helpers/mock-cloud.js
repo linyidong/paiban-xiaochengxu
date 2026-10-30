@@ -60,6 +60,11 @@ function createDb(state) {
         return {
           get: async function () { return { data: matched().slice(skipN, skipN + limitN) }; },
           count: async function () { return { total: matched().length }; },
+          update: async function (payload) {
+            const hits = matched();
+            hits.forEach(function (d) { Object.assign(d, payload.data); });
+            return { stats: { updated: hits.length } };
+          },
           remove: async function () {
             const keep = arr.filter(function (d) { return !match(d, cond); });
             const removed = arr.length - keep.length;

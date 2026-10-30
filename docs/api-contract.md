@@ -102,11 +102,12 @@
 | `name` | string | 视动作 | 成员名（bind/create/add） |
 | `id` | string | 视动作 | 成员 `_id`（rename/remove/unbind） |
 | `newName` | string | rename 必填 | 新成员名（≤20 字符） |
+| `bindable` | boolean | 否 | `list` 时只返回未绑定成员；当前用户自己的记录仍返回 |
 | `wxId` | string | 否 | `add` 时写入，当前未使用 |
 
 - 响应：
-  - `list`：`{ ok:true, members:[{_id,name,wxId,role,createdAt,isBound,isSelf}] }`；管理员额外含 `openid`
-  - `bindWechat`：`{ ok:true, openid, name, role }`；失败 `成员不存在` / `该成员已被其他用户绑定，请联系管理员解绑` / `管理员账号不能绑定`
+  - `list`：`{ ok:true, members:[{_id,name,wxId,role,createdAt,isBound,isSelf}] }`；管理员额外含 `openid`；`bindable:true` 时已绑定他人不返回
+  - `bindWechat`：`{ ok:true, openid, name, role }`；失败 `成员不存在` / `该成员已被其他用户绑定，请联系管理员解绑` / `该成员刚刚已被其他用户绑定，请刷新后重试` / `管理员账号不能绑定`
   - `createAndBind`：`{ ok:true, openid, name, role, _id }`；失败 `alreadyBound` / `请输入成员昵称` / `该昵称已被使用` / `管理员账号不能绑定`
   - `add`：`{ ok:true }`；失败 `缺少姓名` / `该姓名已存在`（仅管理员）
   - `rename`：`{ ok:true, name, oldName }`；同名返回 `{ ok:true, unchanged:true }`；失败 `缺少成员id` / `请输入新名字` / `名字最多 20 个字符` / `该姓名已存在` / `不能修改管理员名字`（仅管理员）
