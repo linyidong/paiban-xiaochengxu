@@ -98,7 +98,7 @@
 
 | 名称 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `action` | string | 是 | `list` / `bindWechat` / `createAndBind` / `add` / `rename` / `remove` / `unbind` |
+| `action` | string | 是 | `list` / `bindWechat` / `createAndBind` / `add` / `rename` / `renameSelf` / `remove` / `unbind` |
 | `name` | string | 视动作 | 成员名（bind/create/add） |
 | `id` | string | 视动作 | 成员 `_id`（rename/remove/unbind） |
 | `newName` | string | rename 必填 | 新成员名（≤20 字符） |
@@ -110,9 +110,10 @@
   - `createAndBind`：`{ ok:true, openid, name, role, _id }`；失败 `alreadyBound` / `请输入成员昵称` / `该昵称已被使用` / `管理员账号不能绑定`
   - `add`：`{ ok:true }`；失败 `缺少姓名` / `该姓名已存在`（仅管理员）
   - `rename`：`{ ok:true, name, oldName }`；同名返回 `{ ok:true, unchanged:true }`；失败 `缺少成员id` / `请输入新名字` / `名字最多 20 个字符` / `该姓名已存在` / `不能修改管理员名字`（仅管理员）
+  - `renameSelf`：`{ ok:true, name, oldName }`；只按当前 OPENID 查自己，不接受他人 id；失败 `请输入新名字` / `该姓名已存在` / `未绑定成员`
   - `remove`：`{ ok:true, softDeleted:true, shiftsPreserved:true }`；失败 `缺少id` / `成员不存在` / `不能移除管理员`（仅管理员；**软删除，保留 shifts**）
   - `unbind`：`{ ok:true, name }`；失败 `缺少成员id` / `成员不存在`（仅管理员）
-- 鉴权：`list`/`bindWechat`/`createAndBind` 全员；其余 `checkAdmin`
+- 鉴权：`list`/`bindWechat`/`createAndBind`/`renameSelf` 全员；其余 `checkAdmin`
 - 幂等性：`bindWechat` 对已绑定同一 openid 幂等；`createAndBind` 第二次返回 `alreadyBound`
 
 ### `manageMemo`

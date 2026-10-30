@@ -40,7 +40,6 @@ Page({
     legendItems: getShiftOptions(),
     // 多选模式
     multiSelect: false,
-    showImport: false,
     selectedDates: [],
     isAdmin: false,
     selectedIsAdmin: false,
@@ -157,11 +156,12 @@ Page({
       c.color = t ? getShiftColor(t) : '';
       c.selected = sel.indexOf(c.fullDate) > -1;
     });
-    // 批量/导入按钮放在日历网格外的操作条，避免占用/覆盖日期格
+    // 批量/导入追加在当月最后一天之后；不覆盖任何真实日期
     const session = wx.getStorageSync('session') || {};
     const showImport = !this.data.hasData && !this.data.multiSelect &&
       (this.data.isAdmin || this.data.selectedMember === (session.name || ''));
-    this.setData({ cells: cells, showImport: showImport });
+    const decorated = cal.withBatchCell(cells, this.data.multiSelect ? '完成' : '批量', this.data.multiSelect, showImport);
+    this.setData({ cells: decorated });
     // 根据当前成员的实际排班数据更新图例和弹窗选项
     this.updateShiftDisplay(myMap);
   },

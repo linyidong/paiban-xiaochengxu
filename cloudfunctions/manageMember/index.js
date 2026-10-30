@@ -96,6 +96,28 @@ exports.main = async (event) => {
     return { ok: true, openid: OPENID, name: newName, role: 'member', _id: addRes._id };
   }
 
+  if (action === 'renameSelf') {
+    const newName = String(event.newName || '').trim();
+    if (!newName) return { ok: false, msg: '请输入新名字' };
+    if (newName.length > 20) return { ok: false, msg: '名字最多 20 个字符' };
+    if (/[\u0000-\u001f]/.test(newName)) return { ok: false, msg: '名字不能包含控制字符' };
+    const mineRes = await db.collection('users').where({ openid: OPENID }).get();
+    const me = mineRes.data.filter(function (u) { return !u.isDeleted; })[0];
+    if (!me) return { ok: false, msg: '未绑定成员' };
+    if (me.name === newName) return { ok: true, unchanged: true, name: newName };
+    const oldName = me.name;
+    const dup = await db.collection('users').where({ name: newName }).get();
+    const others = dup.data.filter(function (u) { return u._id !== me._id; });
+    if (others.length) {
+      const deleted = others.filter(function (u) { return u.isDeleted; });
+      return { ok: false, msg: deleted.length ? '该姓名已存在（可能已删除）' : '该姓名已存在' };
+    }
+    await db.collection('users').doc(me._id).update({
+      data: { name: newName, updatedAt: db.serverDate() }
+    });
+    return { ok: true, name: newName, oldName: oldName };
+  }
+
   // 以下操作仅管理员可用
   const isAdmin = await checkAdmin(OPENID);
   if (!isAdmin) return { ok: false, msg: '仅管理员可操作' };

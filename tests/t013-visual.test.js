@@ -15,7 +15,7 @@ test('旧色值在日历页/组件中出现 0 次', function () {
   });
 });
 
-test('批量按钮在操作条内且不使用绝对定位', function () {
+test('批量按钮在日期网格内且不使用绝对定位', function () {
   assert.strictEqual(/\.multi-btn\s*\{/.test(pageCss), false);
   const m = compCss.match(/\.batch-btn\s*\{[^}]*\}/);
   assert.ok(m, 'batch-btn 规则存在');

@@ -29,7 +29,7 @@ test('组件注册 import 事件并渲染导入按钮', function () {
   const js = fs.readFileSync(path.join(root, 'components', 'calendar', 'calendar.js'), 'utf8');
   const wxml = fs.readFileSync(path.join(root, 'components', 'calendar', 'calendar.wxml'), 'utf8');
   assert.ok(js.includes("triggerEvent('import')"));
-  assert.ok(wxml.includes('bindtap="onImport"'));
+  assert.ok(wxml.includes('data-import'));
   assert.ok(wxml.includes('import-btn'));
 });
 

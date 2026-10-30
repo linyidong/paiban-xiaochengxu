@@ -156,31 +156,47 @@ exports.main = async (event) => {
     let monthKey = allRows[0].date.slice(0, 7);
     if (!/^\d{4}-\d{2}$/.test(monthKey)) return { ok: false, msg: '日期格式不合法：' + allRows[0].date };
     for (const r of allRows) {
-      if (r.date.slice(0, 7) !== monthKey) {
+      if ((!eventYear || !eventMonth) && r.date.slice(0, 7) !== monthKey) {
         return { ok: false, msg: '预览包含多个月份，请重新识别或按月份分别导入' };
       }
       if (!isValidDate(r.date)) return { ok: false, msg: '日期不合法：' + r.date };
     }
     let rowsForPlan = allRows;
+    let targetYear = 0;
+    let targetMonth = 0;
+    let want = '';
     if (eventYear && eventMonth) {
-      const want = eventYear + '-' + String(eventMonth).padStart(2, '0');
-      if (monthKey !== want) {
-        // 用户已在导入页显式选择目标月份 → 以所选月份为准。
-        // 不再要求 overrideMonth：兼容 1.2.x 旧客户端（它们会选月份但不带该标记）。
-        // 只保留「日」，把年月重写到目标月；目标月不存在的日期（如 11-31）直接丢弃并计数。
-        const maxDay = daysInMonth(eventYear, eventMonth);
-        const kept = [];
-        for (const r of allRows) {
-          const day = parseInt(r.date.slice(8, 10), 10);
-          if (!day || day > maxDay) { droppedDays += 1; continue; }
-          r.date = want + '-' + String(day).padStart(2, '0');
-          kept.push(r);
-        }
-        rowsForPlan = kept;
-        monthKey = want;
-        monthRewritten = true;
-      }
+      targetYear = eventYear;
+      targetMonth = eventMonth;
+      want = eventYear + '-' + String(eventMonth).padStart(2, '0');
+    } else {
+      const parts = monthKey.split('-').map(Number);
+      targetYear = parts[0];
+      targetMonth = parts[1];
+      want = monthKey;
     }
+    const maxDay = daysInMonth(targetYear, targetMonth);
+    const byDay = {};
+    for (const r of allRows) {
+      const day = parseInt(r.date.slice(8, 10), 10);
+      if (!day || day > maxDay) { droppedDays += 1; continue; }
+      if (!eventYear || !eventMonth) {
+        if (r.date.slice(0, 7) !== monthKey) {
+          return { ok: false, msg: '预览包含多个月份，请重新识别或按月份分别导入' };
+        }
+      } else {
+        const nd = want + '-' + String(day).padStart(2, '0');
+        if (nd !== r.date) monthRewritten = true;
+        r.date = nd;
+      }
+      if (byDay[day]) droppedDays += 1; // 同一天重复，后出现覆盖前一条
+      byDay[day] = r;
+    }
+    rowsForPlan = Object.keys(byDay)
+      .map(Number)
+      .sort(function (a, b) { return a - b; })
+      .map(function (d) { return byDay[d]; });
+    monthKey = want;
     // “取消”是清空动作：不写入班次，但该日期仍属于本月替换范围
     const rows = rowsForPlan.filter(function (r) { return r.shift && r.shift !== '取消' && r.shift !== 'IEB'; });
     plans.push({ name: finalName, userId: userId, rows: rows, monthKey: monthKey });
