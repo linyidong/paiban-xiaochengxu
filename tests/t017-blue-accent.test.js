@@ -27,7 +27,7 @@ function ratio(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-test('批量按钮已进入日期网格（组件内），页面不再有独立 multi-btn', function () {
+test('批量按钮在组件操作条，页面不再有独立 multi-btn', function () {
   assert.strictEqual(pageCss.includes('.multi-btn'), false);
   const b = block(compCss, '.batch-btn');
   assert.match(b, /background:\s*#EAF2FF/i);

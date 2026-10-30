@@ -22,14 +22,13 @@
   margin-top: 6rpx; font-size: 22rpx; color: #FFFFFF;
   border-radius: 8rpx; padding: 2rpx 12rpx;
 }
-/* 批量按钮：占一个日期格，整格可点；文字与同排日期数字对齐 */
-.batch-cell {
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
+/* 批量/导入独立操作条：不占日期格，避免覆盖 29/30 号 */
+.cal-actions {
+  display: flex; justify-content: flex-end; align-items: center;
+  gap: 12rpx; padding: 12rpx 0 0;
 }
 .batch-btn {
-  width: 100%;
+  min-width: 128rpx;
   height: 56rpx;
   line-height: 52rpx;
   text-align: center;
@@ -40,19 +39,8 @@
   border-radius: 8rpx;
   box-sizing: border-box;
 }
-.batch-btn.on {
-  background: #1D4ED8;
-  color: #FFFFFF;
-  border-color: #1D4ED8;
-}
-/* 导入按钮：空月时出现在批量右侧 */
-.import-cell {
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
 .import-btn {
-  width: 100%;
+  min-width: 128rpx;
   height: 56rpx;
   line-height: 52rpx;
   text-align: center;
@@ -62,4 +50,9 @@
   border: 2rpx solid #BFDBFE;
   border-radius: 8rpx;
   box-sizing: border-box;
+}
+.batch-btn.on {
+  background: #1D4ED8;
+  color: #FFFFFF;
+  border-color: #1D4ED8;
 }
