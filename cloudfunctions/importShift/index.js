@@ -81,17 +81,20 @@ exports.main = async (event) => {
     });
     preview = Object.keys(merged).map(function (k) { return merged[k]; });
     // 按导入对象过滤：输入姓名 → 只取该成员的排班；填"全部"/留空 → 整表
+    let targetMissing = false;
     if (targetName && targetName.trim() !== '全部') {
-      const allNames = preview.map(function (p) { return p.name; });
       const t = translateAlias(targetName.trim());
-      preview = preview.filter(function (p) { return p.name === t || p.name.indexOf(t) > -1 || t.indexOf(p.name) > -1; });
-      if (!preview.length) {
-        const hint = allNames.length ? '本表识别到成员：' + allNames.join('、') : '本表未识别到任何成员（图片过模糊或未识别出）';
-        return { ok: false, msg: '未识别到「' + t + '」的排班。' + hint, preview: preview };
+      const filtered = preview.filter(function (p) { return p.name === t || p.name.indexOf(t) > -1 || t.indexOf(p.name) > -1; });
+      if (filtered.length) {
+        preview = filtered;
+      } else {
+        // 目标昵称与表里的真实姓名可能不一致：保留整表返回，
+        // 由前端让用户确认“把识别到的某个人导入到目标成员”，不能在这里直接失败。
+        targetMissing = true;
       }
     }
     if (!preview.length) return { ok: false, msg: '未识别到排班内容，请检查图片/表格格式', preview: preview };
-    return { ok: true, preview: preview };
+    return { ok: true, preview: preview, targetMissing: targetMissing };
   }
 
   // ---------- 第二步：确认入库（按成员 + 月份全量替换） ----------
