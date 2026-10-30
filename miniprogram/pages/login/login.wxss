@@ -61,7 +61,10 @@
 .bind-input {
   background: var(--color-bg);
   border-radius: 12rpx;
-  padding: 22rpx 24rpx;
+  height: 88rpx;
+  min-height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 24rpx;
   font-size: 32rpx;
   margin-bottom: 16rpx;
   box-sizing: border-box;
