@@ -309,7 +309,8 @@ Page({
     });
   },
   _showCandidatesForTarget(targetName, allPreview, tm) {
-    const candidates = (allPreview || []).filter((p) => !this._isBoundToOther(p, targetName));
+    // 按需求 2.4：没有命中时列出表内所有人员，让当前成员选择；不再排除已绑定人员
+    const candidates = (allPreview || []).slice();
     if (!candidates.length) {
       this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
       wx.showModal({
@@ -444,7 +445,8 @@ Page({
                   this._useMatchedRows(hits, wanted, tm, fullPreview);
                   return;
                 }
-                const candidates = fullPreview.filter((p) => !this._isBoundToOther(p, wanted));
+                // 需求 2.4：没有命中时列出表内所有人员，让当前成员选择
+                const candidates = fullPreview.slice();
                 if (!candidates.length) {
                   this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
                   wx.showModal({
