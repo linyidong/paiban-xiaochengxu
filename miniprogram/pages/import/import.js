@@ -7,6 +7,8 @@ Page({
     loading: false,
     sourceType: '',
     targetName: '',
+    // 目标昵称不在识别表中时，记录待映射的目标成员
+    mappingTargetName: '',
     // 从日历空月“导入”按钮带过来的目标成员/月份
     prefillName: '',
     // 目标月份（提前导入用）：'YYYY-MM'，空 = 按截图识别结果入库
@@ -202,11 +204,18 @@ Page({
                   // 绝不自动猜，也不回退到其他人。
                   const only = fullPreview.length === 1 ? fullPreview[0] : null;
                   if (!only) {
-                    this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
-                    wx.showModal({
-                      title: '未识别到目标成员',
-                      content: '目标成员是「' + wanted + '」，识别结果里没有该成员，且识别到多人。请重新上传或先选择正确成员。',
-                      showCancel: false
+                    // 多人表：列出识别到的人，让用户选“表里哪个人对应目标昵称”
+                    const members = fullPreview.map(function (p) {
+                      return { name: p.name, displayName: p.displayName || p.name };
+                    });
+                    this.setData({
+                      preview: null,
+                      fullPreview: fullPreview,
+                      showMemberSelect: true,
+                      recognizedMembers: members,
+                      mappingTargetName: wanted,
+                      targetName: '',
+                      previewNote: ''
                     });
                     return;
                   }
@@ -303,10 +312,33 @@ Page({
   onSelectMember(e) {
     const name = e.currentTarget.dataset.name;
     const filtered = (this.data.fullPreview || []).filter(function (p) { return p.name === name; });
+    const mappingTarget = this.data.mappingTargetName;
+    if (mappingTarget && filtered.length) {
+      // 目标昵称不在表里：用户选了表中对应的人 → 规范成目标成员再入库
+      const mapped = filtered.map(function (p) {
+        return Object.assign({}, p, { name: mappingTarget, displayName: getDisplayName(mappingTarget) });
+      });
+      const adjusted = normalizePreviewToMonth(mapped, this.data.targetMonth || '');
+      const note = '已将「' + (filtered[0].displayName || filtered[0].name) + '」映射为「' + mappingTarget + '」' +
+        (adjusted.dropped ? '；忽略 ' + adjusted.dropped + ' 天（该月不存在）' : '');
+      this.setData({
+        showMemberSelect: false,
+        preview: adjusted.preview,
+        fullPreview: adjusted.preview,
+        targetName: mappingTarget,
+        mappingTargetName: '',
+        recognizedMembers: [],
+        previewNote: note
+      });
+      wx.showToast({ title: '已映射到' + mappingTarget, icon: 'success' });
+      setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
+      return;
+    }
     this.setData({
       showMemberSelect: false,
       preview: filtered,
       targetName: name,
+      mappingTargetName: '',
       recognizedMembers: [],
       fullPreview: null
     });
@@ -316,7 +348,7 @@ Page({
     }
   },
   onCancelSelect() {
-    this.setData({ showMemberSelect: false, recognizedMembers: [], fullPreview: null });
+    this.setData({ showMemberSelect: false, recognizedMembers: [], fullPreview: null, mappingTargetName: '' });
   },
   // 管理员：整表导入（一次识别、一次提交写入全部成员）
   onSelectAllMembers() {
