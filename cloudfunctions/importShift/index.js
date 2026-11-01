@@ -103,8 +103,8 @@ exports.main = async (event) => {
         if (active) targetRealName = active.realName || '';
       } catch (e) { /* 查询失败不阻塞识别 */ }
     }
-    return { ok: true, preview: preview, targetMissing: targetMissing, targetRealName: targetRealName };
-  }
+    console.log('[Import] targetName=' + (targetName || '') + ' targetRealName=' + (targetRealName || '') + ' rows=' + preview.length);
+    return { ok: true, preview: preview, targetMissing: targetMissing, targetRealName: targetRealName };  }
 
   // ---------- 第二步：确认入库（按成员 + 月份全量替换） ----------
   let preview = event.preview;

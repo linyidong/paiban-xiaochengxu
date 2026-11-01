@@ -269,7 +269,7 @@ Page({
       return;
     }
     if (target && String(target.realName || '').trim() === realName) { apply(); return; }
-    const isSelf = String(targetName) === String(this.data.boundMemberName || '');
+    const isSelf = !this.data.isAdmin || String(targetName) === String(this.data.boundMemberName || '');
     const payload = isSelf
       ? { action: 'setRealNameSelf', realName: realName }
       : (target ? { action: 'setRealName', id: target._id, realName: realName } : null);
@@ -357,6 +357,14 @@ Page({
   },
   // 上传并识别（始终识别所有人，不传 targetName）
   uploadAndRecognize(filePath, type) {
+    // 清空上一次识别的残留，避免第二次导入被旧候选/旧预览干扰
+    this.setData({
+      preview: null,
+      fullPreview: null,
+      showMemberSelect: false,
+      recognizedMembers: [],
+      previewNote: ''
+    });
     this.setData({ loading: true, sourceType: type });
     let ext = '.xlsx';
     if (type === 'image') {
@@ -400,6 +408,7 @@ Page({
               });
               // 服务端直接返回目标真实姓名，避免客户端目录未刷新导致“未绑定”
               if (r.targetRealName) this.setData({ targetRealName: r.targetRealName });
+              try {
               // 统一候选显示：真实姓名优先，昵称不同则附在括号里
               // 目标成员：从日历带入的名字；成员直接点导入时用自己绑定的名字
               const matchTarget = this.data.prefillName ||
@@ -501,6 +510,13 @@ Page({
                   recognizedMembers: members,
                   fullPreview: previewAll,
                   previewNote: previewNote
+                });
+              }
+              } catch (e) {
+                wx.showModal({
+                  title: '识别结果处理失败',
+                  content: (e && e.message) ? e.message : '客户端处理识别结果异常，请重试',
+                  showCancel: false
                 });
               }
             } else {
