@@ -86,6 +86,26 @@ exports.main = async (event) => {
     return { ok: true, openid: OPENID, name: doc.name, role: doc.role || 'member' };
   }
 
+  if (action === 'checkName') {
+    const name = String(event.name || '').trim();
+    if (!name) return { ok: true, exists: false };
+    const res = await db.collection('users').where({ name: name }).get();
+    const active = res.data.filter(function (u) { return !u.isDeleted; })[0];
+    if (!active) return { ok: true, exists: false };
+    return {
+      ok: true,
+      exists: true,
+      member: {
+        _id: active._id,
+        name: active.name,
+        realName: active.realName || '',
+        role: active.role,
+        isBound: !!active.openid,
+        isSelf: active.openid === OPENID
+      }
+    };
+  }
+
   if (action === 'createAndBind') {
     const myBound = await db.collection('users').where({ openid: OPENID }).get();
     const myActive = myBound.data.filter(function (u) { return !u.isDeleted; });
@@ -94,6 +114,8 @@ exports.main = async (event) => {
     }
     const newName = (event.name || '').trim();
     if (!newName) return { ok: false, msg: '请输入成员昵称' };
+    const newRealName = String(event.realName || '').trim();
+    if (newRealName.length > 20) return { ok: false, msg: '真实姓名最多 20 个字符' };
     const dup = await db.collection('users').where({ name: newName }).get();
     if (dup.data.length) {
       const deleted = dup.data.filter(function (u) { return u.isDeleted; });
@@ -101,17 +123,17 @@ exports.main = async (event) => {
       const adminDup = dup.data.filter(function (u) { return u.role === 'admin'; });
       if (adminDup.length) return { ok: false, msg: '管理员账号不能绑定' };
       if (!dup.data[0].openid || dup.data[0].openid === OPENID) {
-        await db.collection('users').doc(dup.data[0]._id).update({
-          data: { openid: OPENID, role: dup.data[0].role || 'member' }
-        });
-        return { ok: true, openid: OPENID, name: dup.data[0].name, role: dup.data[0].role || 'member' };
+        const patch = { openid: OPENID, role: dup.data[0].role || 'member' };
+        if (newRealName) patch.realName = newRealName;
+        await db.collection('users').doc(dup.data[0]._id).update({ data: patch });
+        return { ok: true, openid: OPENID, name: dup.data[0].name, realName: newRealName || dup.data[0].realName || '', role: dup.data[0].role || 'member' };
       }
-      return { ok: false, msg: '该昵称已被使用' };
+      return { ok: false, msg: '该昵称已被使用', existing: { name: dup.data[0].name, realName: dup.data[0].realName || '' } };
     }
-    const addRes = await db.collection('users').add({
-      data: { name: newName, wxId: '', role: 'member', openid: OPENID, createdAt: db.serverDate() }
-    });
-    return { ok: true, openid: OPENID, name: newName, role: 'member', _id: addRes._id };
+    const addData = { name: newName, wxId: '', role: 'member', openid: OPENID, createdAt: db.serverDate() };
+    if (newRealName) addData.realName = newRealName;
+    const addRes = await db.collection('users').add({ data: addData });
+    return { ok: true, openid: OPENID, name: newName, realName: newRealName, role: 'member', _id: addRes._id };
   }
 
   if (action === 'renameSelf') {

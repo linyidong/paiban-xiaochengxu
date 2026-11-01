@@ -274,13 +274,47 @@ Page({
       }
     });
   },
-  _useMatchedRows(hits, targetName, tm) {
-    // 同名重复行合并；同一成员命中就直接采用，不再弹确认
+  _showCandidatesForTarget(targetName, allPreview, tm) {
+    const candidates = (allPreview || []).filter((p) => !this._isBoundToOther(p, targetName));
+    if (!candidates.length) {
+      this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
+      wx.showModal({
+        title: '没有可选的排班',
+        content: '排班表里的人都已绑定到其他成员，不能给「' + targetName + '」重复绑定。请管理员先解绑。',
+        showCancel: false
+      });
+      return;
+    }
+    this.setData({
+      preview: null,
+      fullPreview: candidates,
+      showMemberSelect: true,
+      recognizedMembers: candidates.map(function (p) {
+        return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name };
+      }),
+      mappingTargetName: targetName,
+      targetName: '',
+      previewNote: ''
+    });
+  },
+  _useMatchedRows(hits, targetName, tm, allPreview) {
+    // 同名重复行合并；命中后先让用户确认“成员昵称 = 表里这个人”
     const byName = {};
     hits.forEach(function (p) { byName[p.name] = p; });
     const rows = Object.keys(byName).map(function (k) { return byName[k]; });
     if (rows.length === 1) {
-      this._applyMappedRow(rows[0], targetName, tm);
+      const p = rows[0];
+      const source = [p.nickname, p.realName].filter(Boolean).join(' / ') || p.name;
+      wx.showModal({
+        title: '确认成员对应关系',
+        content: '成员「' + targetName + '」是否对应排班表里的「' + source + '」？',
+        confirmText: '是的，使用这一行',
+        cancelText: '不是，重新选择',
+        success: (r) => {
+          if (r.confirm) this._applyMappedRow(p, targetName, tm);
+          else this._showCandidatesForTarget(targetName, allPreview || rows, tm);
+        }
+      });
       return;
     }
     this.setData({
@@ -357,7 +391,7 @@ Page({
                   });
                 }
                 if (hits.length) {
-                  this._useMatchedRows(hits, wanted, tm);
+                  this._useMatchedRows(hits, wanted, tm, fullPreview);
                   return;
                 }
                 const candidates = fullPreview.filter((p) => !this._isBoundToOther(p, wanted));

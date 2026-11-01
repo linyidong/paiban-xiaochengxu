@@ -14,6 +14,8 @@ Page({
     selectedDisplayName: '',
     showCreateInput: false,
     newName: '',
+    newRealName: '',
+    forceNewIdentity: false,
     // 导入排班
     importLoading: false,
     importPreview: null,
@@ -111,6 +113,63 @@ Page({
   onNewNameInput(e) {
     this.setData({ newName: e.detail.value });
   },
+  onNewRealNameInput(e) {
+    this.setData({ newRealName: e.detail.value });
+  },
+  onCreateAndBind() {
+    const name = (this.data.newName || "").trim();
+    const realName = (this.data.newRealName || "").trim();
+    if (!name) { wx.showToast({ title: "请输入成员昵称", icon: "none" }); return; }
+    if (this.data.forceNewIdentity && !realName) {
+      wx.showToast({ title: "请填写新的真实姓名", icon: "none" });
+      return;
+    }
+    if (this.data.loading) return;
+    this.setData({ loading: true });
+    wx.cloud.callFunction({
+      name: "manageMember",
+      data: { action: "checkName", name: name },
+      success: (res) => {
+        const r = res.result || {};
+        if (r.ok && r.exists) {
+          this.setData({ loading: false });
+          const m = r.member;
+          wx.showModal({
+            title: "成员已存在",
+            content: "系统已有成员「" + m.name + "」" +
+              (m.realName ? "，真实姓名「" + m.realName + "」" : "，还没有真实姓名") +
+              "。你是这位成员吗？",
+            confirmText: "是我",
+            cancelText: "不是我",
+            success: (x) => {
+              if (x.confirm) {
+                if (m.isBound && !m.isSelf) {
+                  wx.showModal({
+                    title: "已被绑定",
+                    content: "该成员已被其他微信绑定，请联系管理员解绑或转移后再登录。",
+                    showCancel: false
+                  });
+                  return;
+                }
+                this._bindExisting(m.name);
+                return;
+              }
+              this.setData({
+                forceNewIdentity: true,
+                showCreateInput: true,
+                newName: "",
+                newRealName: ""
+              });
+              wx.showToast({ title: "请换新昵称并填写真实姓名", icon: "none" });
+            }
+          });
+          return;
+        }
+        this._createAndBind(name, realName);
+      },
+      fail: () => this._createAndBind(name, realName)
+    });
+  },
   onConfirmBind() {
     const name = this.data.selectedName;
     if (!name) { wx.showToast({ title: '请先选择成员', icon: 'none' }); return; }
@@ -131,26 +190,37 @@ Page({
       complete: () => this.setData({ loading: false })
     });
   },
-  onCreateAndBind() {
-    const name = (this.data.newName || '').trim();
-    if (!name) { wx.showToast({ title: '请输入成员昵称', icon: 'none' }); return; }
-    if (this.data.loading) return;
+  _bindExisting(name) {
     this.setData({ loading: true });
     wx.cloud.callFunction({
-      name: 'manageMember',
-      data: { action: 'createAndBind', name: name },
+      name: "manageMember",
+      data: { action: "bindWechat", name: name },
+      success: (res) => {
+        const r = res.result || {};
+        if (r.ok) this._saveSessionAndEnter(r);
+        else wx.showToast({ title: r.msg || "绑定失败", icon: "none" });
+      },
+      fail: () => wx.showToast({ title: "绑定失败，请重试", icon: "none" }),
+      complete: () => this.setData({ loading: false })
+    });
+  },
+  _createAndBind(name, realName) {
+    this.setData({ loading: true });
+    wx.cloud.callFunction({
+      name: "manageMember",
+      data: { action: "createAndBind", name: name, realName: realName },
       success: (res) => {
         const r = res.result || {};
         if (r.ok) {
           this._saveSessionAndEnter(r);
-        } else if (r.msg === 'alreadyBound') {
+        } else if (r.msg === "alreadyBound") {
           const dn = getDisplayName(r.boundName);
-          wx.showModal({ title: '提示', content: '您已绑定成员：' + dn, showCancel: false });
+          wx.showModal({ title: "提示", content: "您已绑定成员：" + dn, showCancel: false });
         } else {
-          wx.showToast({ title: r.msg || '创建失败', icon: 'none' });
+          wx.showToast({ title: r.msg || "创建失败", icon: "none" });
         }
       },
-      fail: () => wx.showToast({ title: '创建失败，请重试', icon: 'none' }),
+      fail: () => wx.showToast({ title: "创建失败，请重试", icon: "none" }),
       complete: () => this.setData({ loading: false })
     });
   },

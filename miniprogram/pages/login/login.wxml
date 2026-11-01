@@ -45,6 +45,7 @@
       </view>
       <view class="bind-create-form" wx:if="{{showCreateInput}}">
         <input class="bind-input" placeholder="输入成员昵称" value="{{newName}}" bindinput="onNewNameInput" />
+        <input class="bind-input" placeholder="真实姓名（可选；重名时必填）" value="{{newRealName}}" bindinput="onNewRealNameInput" />
         <button class="btn-primary bind-create-btn" bindtap="onCreateAndBind" loading="{{loading}}">创建并绑定</button>
       </view>
     </view>
