@@ -20,17 +20,20 @@ function markDeleted(state, id) {
   return u;
 }
 
-test('remove 只打软删除标记，users 与 shifts 都不删除', async function () {
+test('remove 硬删除成员及其排班/备忘录/日志', async function () {
   const ctx = setup('manageMember', 'o-admin');
   ctx.state.shifts.push({ _id: 's1', userId: 'u2', date: '2026-10-01', shiftType: '休' });
+  ctx.state.memos.push({ _id: 'm1', openid: 'o-member-2', text: '测试' });
+  ctx.state.usageLogs = [];
+  ctx.state.usageLogs.push({ _id: 'l1', openid: 'o-member-2', event: 'launch' });
   const r = await ctx.main({ action: 'remove', id: 'u2' });
   assert.strictEqual(r.ok, true);
-  assert.strictEqual(r.softDeleted, true);
+  assert.strictEqual(r.hardDeleted, true);
   const u = ctx.state.users.find(function (x) { return x._id === 'u2'; });
-  assert.ok(u);
-  assert.strictEqual(u.isDeleted, true);
-  assert.ok(u.deletedAt);
-  assert.strictEqual(ctx.state.shifts.length, 1, '排班必须保留');
+  assert.strictEqual(u, undefined, '成员记录必须删除');
+  assert.strictEqual(ctx.state.shifts.length, 0, '排班必须删除');
+  assert.strictEqual(ctx.state.memos.length, 0, '备忘录必须删除');
+  assert.strictEqual(ctx.state.usageLogs.length, 0, '使用日志必须删除');
 });
 
 test('list 不返回已删除成员', async function () {

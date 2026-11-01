@@ -222,16 +222,15 @@ Page({
         (!nickname && !realName && p.name && (mn === p.name || mr === p.name));
     });
   },
-  // 统一人员显示：昵称优先；没有昵称才用真实姓名；两者不同时第二行补真实姓名
+  // 统一人员显示：昵称优先；两者都存在时使用“昵称/真实姓名”格式
   _memberLabel(p) {
     const nick = String(p.nickname || '').trim();
     const real = String(p.realName || '').trim();
+    if (nick && real && nick !== real) return nick + '/' + real;
     return nick || real || p.name;
   },
   _memberSubLabel(p) {
-    const nick = String(p.nickname || '').trim();
-    const real = String(p.realName || '').trim();
-    return (nick && real && nick !== real) ? real : '';
+    return '';
   },
   _applyMappedRow(row, targetName, tm) {
     const self = this;
@@ -403,15 +402,19 @@ Page({
               if (matchTarget) {
                 const wanted = matchTarget;
                 const targetRealName = this.data.targetRealName || '';
-                // 先昵称；昵称没命中才看真实姓名；命中同一人直接采用
+                // 昵称优先；昵称没命中再看目标昵称/真实姓名是否命中文件真实姓名
                 const nicknameHits = fullPreview.filter(function (p) {
                   const n = String(p.nickname || p.name || '').trim();
                   return n && n === wanted;
                 });
                 let hits = nicknameHits;
-                if (!hits.length && targetRealName) {
+                if (!hits.length) {
                   hits = fullPreview.filter(function (p) {
-                    return String(p.realName || '').trim() === targetRealName;
+                    const n = String(p.nickname || p.name || '').trim();
+                    const r = String(p.realName || '').trim();
+                    return (n && n === wanted) ||
+                      (r && r === wanted) ||
+                      (targetRealName && ((n && n === targetRealName) || (r && r === targetRealName)));
                   });
                 }
                 if (hits.length) {

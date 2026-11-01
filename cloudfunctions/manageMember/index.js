@@ -249,11 +249,24 @@ exports.main = async (event) => {
     const target = await db.collection('users').doc(id).get().catch(function () { return { data: null }; });
     if (!target.data || target.data.isDeleted) return { ok: false, msg: '成员不存在' };
     if (target.data.role === 'admin') return { ok: false, msg: '不能移除管理员' };
-    // 软删除：只打标记，保留 users 与 shifts，便于恢复与追溯
-    await db.collection('users').doc(id).update({
-      data: { isDeleted: true, deletedAt: db.serverDate() }
-    });
-    return { ok: true, softDeleted: true, shiftsPreserved: true };
+    // 硬删除：成员、排班、备忘录、变更日志、使用日志全部清理，删除后不可恢复
+    const openid = target.data.openid || '';
+    const results = {};
+    const removeOne = async function (key, collection, cond) {
+      if (!cond) { results[key] = 0; return; }
+      try {
+        const r = await db.collection(collection).where(cond).remove();
+        results[key] = (r.stats && r.stats.removed) || 0;
+      } catch (e) { results[key] = 0; }
+    };
+    await Promise.all([
+      removeOne('shifts', 'shifts', { userId: id }),
+      removeOne('memos', 'memos', openid ? { openid: openid } : null),
+      removeOne('changeLog', 'changeLog', { userId: id }),
+      removeOne('usageLogs', 'usageLogs', openid ? { openid: openid } : null)
+    ]);
+    await db.collection('users').doc(id).remove();
+    return { ok: true, hardDeleted: true, removed: results };
   }
 
   if (action === 'unbind') {
