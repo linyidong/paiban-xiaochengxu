@@ -67,6 +67,9 @@ Page({
     });
   },
   onShow() {
+    // 页面每次重新展示都复位 loading：第一次导入成功/切 tab/日历带入后，
+    // 不能让旧的“识别中”状态把第二次点击静默挡住
+    this.setData({ loading: false });
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) wx.reLaunch({ url: '/pages/login/login' });
     const isAdmin = session.role === 'admin';
