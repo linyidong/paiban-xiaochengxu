@@ -3,7 +3,9 @@ const test = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
 
-test('王铃芳归位到王玲芳', function () {
+test('王玲芳归位到正确姓名王铃芳', function () {
   const cfg = require(path.join(__dirname, '..', 'cloudfunctions', 'importShift', 'config.json'));
-  assert.ok((cfg.MEMBER_ALIAS['王玲芳'] || []).includes('王铃芳'));
+  assert.ok((cfg.MEMBER_ALIAS['王铃芳'] || []).includes('王玲芳'));
+  assert.ok((cfg.MEMBER_ALIAS['王铃芳'] || []).includes('芳芳'));
+  assert.ok(!cfg.MEMBER_ALIAS['王玲芳']);
 });
