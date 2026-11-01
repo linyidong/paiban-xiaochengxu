@@ -32,6 +32,24 @@ Page({
     bindConfirmRecognizedName: '',
     bindConfirmRecognizedDisplayName: ''
   },
+  onTabItemTap() {
+    // 用户直接点底部“导入”：清掉上一次从日历带入的目标/月份，显示默认入口
+    this._fromDirectTab = true;
+    this._clearEntry();
+  },
+  _clearEntry() {
+    this.setData({
+      prefillName: '',
+      targetName: '',
+      targetMonth: '',
+      mappingTargetName: '',
+      preview: null,
+      fullPreview: null,
+      showMemberSelect: false,
+      recognizedMembers: [],
+      previewNote: ''
+    });
+  },
   onShow() {
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) wx.reLaunch({ url: '/pages/login/login' });
@@ -54,12 +72,18 @@ Page({
     if (prefill && prefill.name) {
       wx.removeStorageSync('importPrefill');
       const tm = prefill.year + '-' + String(prefill.month).padStart(2, '0');
+      this._fromDirectTab = false;
       this.setData({
         prefillName: prefill.name,
         targetName: prefill.name,
         targetMonth: tm
       });
+    } else if (!this._entryInitialized || this._fromDirectTab) {
+      // 首次直接进入，或用户刚点了底部“导入” → 默认入口，不显示目标
+      this._fromDirectTab = false;
+      this._clearEntry();
     }
+    this._entryInitialized = true;
     this.loadMemberDirectory();
   },
   // 成员目录：昵称/真实姓名/是否已绑定；用于导入双重匹配与排除已绑定
