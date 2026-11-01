@@ -301,10 +301,12 @@ Page({
                 p.displayName = getDisplayName(p.name);
                 return p;
               });
-              // 从日历带入成员时：先昵称、再真实姓名；命中要确认，未命中才列未绑定候选
+              // 目标成员：从日历带入的名字；成员直接点导入时用自己绑定的名字
+              const matchTarget = this.data.prefillName ||
+                (!this.data.isAdmin ? this.data.boundMemberName : '');
               let matched = fullPreview;
-              if (this.data.prefillName) {
-                const wanted = this.data.prefillName;
+              if (matchTarget) {
+                const wanted = matchTarget;
                 const targetRealName = this.data.targetRealName || '';
                 // 先昵称；昵称没命中才看真实姓名；命中同一人直接采用
                 const nicknameHits = fullPreview.filter(function (p) {

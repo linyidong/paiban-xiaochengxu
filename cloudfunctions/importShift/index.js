@@ -353,11 +353,11 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
     '你是排班表识别助手。识别图片中的排班表格：',
     '1) 只识别表格主体区域：表头日期（横排 1~31 号）+ 左侧"分组/昵称/人员"列 + 交叉单元格班次；',
     '2) 忽略表格右侧的"小提示"说明区域，不要读取任何说明文字；',
-    '3) 必须分别输出 nickname（昵称列）和 realName（人员/真实姓名列），不要合并；昵称为空则 nickname 输出空字符串；姓名只输出汉字，不要符号或字母；',
+    '3) 必须逐行识别表格中的每一个人，不能只输出第一行；有昵称时分别输出 nickname 和 realName，没有昵称列时 nickname 输出空字符串、realName 输出人员列；只输出汉字，不要符号或字母；',
     '4) 每个单元格是一个完整班次，必须原样照抄（如：休、正、售后、A、B、正A、正B、售A、售B、年假），禁止把"正A"拆成"正"和"A"，只输出汉字或字母，禁止任何符号、图标、数字或解释；',
-    '5) 从标题识别年份与月份（如"2025年12月排岗表"→ year:2025, month:12）；标题没有年份时 year 输出当前年份；month 输出 1~12；',
+    '5) 从标题识别年份与月份（如"2025年12月排岗表"→ year:2025, month:12）；标题没有年份/月份时使用用户给定的目标年月；没有给定则用当前年月；month 输出 1~12；',
     '6) 按当月实际天数输出 days 数组（如 2 月 28/29 项、4 月 30 项），无排班的格子填空字符串""，不得错位、不得漏天；',
-    '7) 只输出紧凑 JSON 数组（不要缩进换行），不要任何解释文字，格式：[{"nickname":"菓菓","realName":"吴义芳","year":2025,"month":10,"days":["售A","休","","正A"]}]'
+    '7) 表格即使没有标题、没有昵称列，也必须输出所有人员行；只输出紧凑 JSON 数组，不要解释，格式：[{"nickname":"菓菓","realName":"吴义芳","year":2025,"month":10,"days":["售A","休","","正A"]}]'
   ];
   // 用户已选目标月份：直接告诉模型按该月输出，避免把 2026-11 识别成 2025-12
   const yO = parseInt(yearOverride, 10) || 0;
@@ -379,19 +379,21 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
   // 服务过载/限流自动重试（最多3次，退避递增）；主模型失败后自动尝试备用模型
   let content = '';
   let lastErr = null;
-  for (let mi = 0; mi < candidates.length; mi++) {
-    try {
-      content = await callVisionWithRetry(base64, promptText, 3, candidates[mi].model, candidates[mi].apiKey);
-      lastErr = null;
-      break;
-    } catch (e) {
-      lastErr = e;
+  let list = [];
+  for (let mi = 0; mi < candidates.length && !list.length; mi++) {
+    // 模型偶发返回空数组时再请求一次，避免把“这次没吐 JSON”直接当成图片无内容
+    for (let attempt = 0; attempt < 2 && !list.length; attempt++) {
+      try {
+        content = await callVisionWithRetry(base64, promptText, 3, candidates[mi].model, candidates[mi].apiKey);
+        list = parsePreview(content) || [];
+        if (list.length) { lastErr = null; break; }
+        lastErr = new Error('AI 未返回可解析的 JSON：' + String(content).slice(0, 200));
+      } catch (e) {
+        lastErr = e;
+      }
     }
   }
-  if (lastErr) throw new Error('主/备模型均识别失败：' + lastErr.message);
-  // 3. 解析响应中的 JSON（兼容：数组 / 对象包裹数组 / 单成员对象；兼容中文引号）
-  const list = parsePreview(content);
-  if (!list || !list.length) throw new Error('AI 未返回可解析的 JSON：' + String(content).slice(0, 200));
+  if (!list.length) throw new Error('主/备模型均识别失败：' + (lastErr ? lastErr.message : 'AI 未返回可解析内容'));
   // 4. 转成 preview 结构：days 按当月天数展开为日期；班次做常见误读归一化
   const nowY = new Date().getFullYear();
   const curM = new Date().getMonth() + 1;
@@ -564,7 +566,7 @@ function callVisionAPI(imageBase64, promptText, model, apiKey) {
           ]
         }
       ],
-      max_tokens: 4096,
+      max_tokens: 8192,
       temperature: 0,
       // 关闭深度思考：该模型思考模式会导致识别超时（60秒上限），实测关闭后从120秒降到36秒
       thinking: { "type": "disabled" }
