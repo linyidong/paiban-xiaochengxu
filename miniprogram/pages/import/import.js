@@ -54,6 +54,7 @@ Page({
   },
   _clearEntry() {
     this.setData({
+      loading: false,
       prefillName: '',
       targetName: '',
       targetMonth: '',
@@ -140,7 +141,10 @@ Page({
     this.setData({ targetMonth: '', previewNote: '' });
   },
   onChooseImage() {
-    if (this.data.loading) return;
+    if (this.data.loading) {
+      wx.showToast({ title: '上一次识别还在处理，请稍候', icon: 'none' });
+      return;
+    }
     wx.showActionSheet({
       itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择', 'Excel 表格（.xlsx/.xls）'],
       success: (res) => {
