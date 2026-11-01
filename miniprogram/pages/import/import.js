@@ -213,26 +213,20 @@ Page({
     wx.showToast({ title: '已匹配到 ' + targetName, icon: 'success' });
     setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
   },
-  _confirmMatchedRows(hits, targetName, tm) {
-    if (hits.length === 1) {
-      const p = hits[0];
-      const source = [p.nickname, p.realName].filter(Boolean).join(' / ') || p.name;
-      wx.showModal({
-        title: '成员匹配确认',
-        content: '目标成员是「' + targetName + '」，排班表这一行是「' + source + '」。是否采用这一行？',
-        confirmText: '采用这一行',
-        cancelText: '取消',
-        success: (r) => {
-          if (r.confirm) this._applyMappedRow(p, targetName, tm);
-        }
-      });
+  _useMatchedRows(hits, targetName, tm) {
+    // 同名重复行合并；同一成员命中就直接采用，不再弹确认
+    const byName = {};
+    hits.forEach(function (p) { byName[p.name] = p; });
+    const rows = Object.keys(byName).map(function (k) { return byName[k]; });
+    if (rows.length === 1) {
+      this._applyMappedRow(rows[0], targetName, tm);
       return;
     }
     this.setData({
       preview: null,
-      fullPreview: hits,
+      fullPreview: rows,
       showMemberSelect: true,
-      recognizedMembers: hits.map(function (p) {
+      recognizedMembers: rows.map(function (p) {
         return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name };
       }),
       mappingTargetName: targetName,
@@ -288,9 +282,19 @@ Page({
               if (this.data.prefillName) {
                 const wanted = this.data.prefillName;
                 const targetRealName = this.data.targetRealName || '';
-                const hits = fullPreview.filter((p) => this._rowMatchesTarget(p, wanted, targetRealName));
+                // 先昵称；昵称没命中才看真实姓名；命中同一人直接采用
+                const nicknameHits = fullPreview.filter(function (p) {
+                  const n = String(p.nickname || p.name || '').trim();
+                  return n && n === wanted;
+                });
+                let hits = nicknameHits;
+                if (!hits.length && targetRealName) {
+                  hits = fullPreview.filter(function (p) {
+                    return String(p.realName || '').trim() === targetRealName;
+                  });
+                }
                 if (hits.length) {
-                  this._confirmMatchedRows(hits, wanted, tm);
+                  this._useMatchedRows(hits, wanted, tm);
                   return;
                 }
                 const candidates = fullPreview.filter((p) => !this._isBoundToOther(p, wanted));

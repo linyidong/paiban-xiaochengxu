@@ -40,8 +40,8 @@ test('目标成员匹配时只写目标成员', async function () {
 
 test('导入页不再回退到其他成员，并提交 targetName', function () {
   const js = fs.readFileSync(path.join(ROOT, 'miniprogram', 'pages', 'import', 'import.js'), 'utf8');
-  assert.ok(js.includes('成员匹配确认'));
-  assert.ok(js.includes('_rowMatchesTarget'));
+  assert.ok(js.includes('_useMatchedRows'));
+  assert.ok(js.includes('nicknameHits'));
   assert.ok(js.includes('mappingTargetName'));
   assert.ok(js.includes('payload.targetName'));
 });

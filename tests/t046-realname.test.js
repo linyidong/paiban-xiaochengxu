@@ -39,8 +39,7 @@ test('Excel 三列（分组/昵称/人员）解析出昵称和真实姓名', fun
 
 test('导入页提供昵称/真实姓名双重匹配与已绑定排除', function () {
   const js = fs.readFileSync(path.join(ROOT, 'miniprogram', 'pages', 'import', 'import.js'), 'utf8');
-  assert.ok(js.includes('_rowMatchesTarget'));
   assert.ok(js.includes('_isBoundToOther'));
   assert.ok(js.includes('targetRealName'));
-  assert.ok(js.includes('成员匹配确认'));
+  assert.ok(js.includes('_useMatchedRows'));
 });

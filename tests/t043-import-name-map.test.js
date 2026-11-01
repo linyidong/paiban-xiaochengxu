@@ -5,10 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 
-test('识别命中时提供“采用这一行”确认', function () {
+test('昵称/真实姓名命中时直接采用，不弹确认', function () {
   const js = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/import/import.js'), 'utf8');
-  assert.ok(js.includes('成员匹配确认'));
-  assert.ok(js.includes('采用这一行'));
-  assert.ok(js.includes('_confirmMatchedRows'));
-  assert.ok(js.includes('_rowMatchesTarget'));
+  assert.ok(js.includes('_useMatchedRows'));
+  assert.ok(js.includes('nicknameHits'));
+  assert.ok(!js.includes('_confirmMatchedRows'));
 });
