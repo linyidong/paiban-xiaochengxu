@@ -136,6 +136,25 @@ exports.main = async (event) => {
     return { ok: true, name: newName, oldName: oldName };
   }
 
+  // 设置真实姓名：管理员可改任意成员；成员只能改自己（映射确认时持久化绑定）
+  if (action === 'setRealName') {
+    const id = event.id;
+    const realName = String(event.realName || '').trim();
+    if (!id) return { ok: false, msg: '缺少成员id' };
+    if (!realName) return { ok: false, msg: '请输入真实姓名' };
+    if (realName.length > 20) return { ok: false, msg: '真实姓名最多 20 个字符' };
+    if (/[\u0000-\u001f]/.test(realName)) return { ok: false, msg: '真实姓名不能包含控制字符' };
+    const target = await db.collection('users').doc(id).get().catch(function () { return { data: null }; });
+    if (!target.data || target.data.isDeleted) return { ok: false, msg: '成员不存在' };
+    const isAdmin = await checkAdmin(OPENID);
+    const isSelf = target.data.openid === OPENID;
+    if (!isAdmin && !isSelf) return { ok: false, msg: '只能设置自己的真实姓名' };
+    await db.collection('users').doc(id).update({
+      data: { realName: realName, updatedAt: db.serverDate() }
+    });
+    return { ok: true, realName: realName, name: target.data.name };
+  }
+
   // 以下操作仅管理员可用
   const isAdmin = await checkAdmin(OPENID);
   if (!isAdmin) return { ok: false, msg: '仅管理员可操作' };

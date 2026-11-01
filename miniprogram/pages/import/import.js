@@ -160,8 +160,8 @@ Page({
         if (f.size > 10 * 1024 * 1024) { wx.showToast({ title: '文件过大（限10MB）', icon: 'none' }); return; }
         wx.compressImage({
           src: f.path,
-          quality: 70,
-          compressedWidth: 1000,
+          quality: 85,
+          compressedWidth: 1600,
           success: (c) => { this.uploadAndRecognize(c.tempFilePath, 'image'); },
           fail: () => { this.uploadAndRecognize(f.path, 'image'); }
         });
@@ -178,8 +178,8 @@ Page({
         if (f.size > 10 * 1024 * 1024) { wx.showToast({ title: '图片过大（限10MB）', icon: 'none' }); return; }
         wx.compressImage({
           src: f.path,
-          quality: 70,
-          compressedWidth: 1000,
+          quality: 85,
+          compressedWidth: 1600,
           success: (c) => { this.uploadAndRecognize(c.tempFilePath, 'image'); },
           fail: () => { this.uploadAndRecognize(f.path, 'image'); }
         });
@@ -223,25 +223,56 @@ Page({
     });
   },
   _applyMappedRow(row, targetName, tm) {
-    const mapped = Object.assign({}, row, {
-      name: targetName,
-      displayName: getDisplayName(targetName)
+    const self = this;
+    const apply = function () {
+      const mapped = Object.assign({}, row, {
+        name: targetName,
+        displayName: getDisplayName(targetName)
+      });
+      const adjusted = normalizePreviewToMonth([mapped], tm);
+      const source = [row.nickname, row.realName].filter(Boolean).join(' / ') || row.name;
+      const note = '匹配到「' + source + '」，已按「' + targetName + '」导入' +
+        (adjusted.dropped ? '；忽略 ' + adjusted.dropped + ' 天（该月不存在）' : '');
+      self.setData({
+        preview: adjusted.preview,
+        fullPreview: adjusted.preview,
+        targetName: targetName,
+        mappingTargetName: '',
+        showMemberSelect: false,
+        recognizedMembers: [],
+        previewNote: note
+      });
+      wx.showToast({ title: '已匹配到 ' + targetName, icon: 'success' });
+      setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
+    };
+    // 用户选择这一行 = 持久绑定真实姓名；下次导入才能自动匹配
+    const realName = String(row.realName || row.nickname || '').trim();
+    const target = (this.data.memberDirectory || []).filter(function (m) { return m.name === targetName; })[0];
+    if (!realName || !target) { apply(); return; }
+    if (String(target.realName || '').trim() === realName) { apply(); return; }
+    wx.showLoading({ title: '绑定真实姓名...' });
+    wx.cloud.callFunction({
+      name: 'manageMember',
+      data: { action: 'setRealName', id: target._id, realName: realName },
+      success: (res) => {
+        wx.hideLoading();
+        const r = res.result || {};
+        if (r.ok) {
+          const dir = (self.data.memberDirectory || []).map(function (m) {
+            return m.name === targetName ? Object.assign({}, m, { realName: realName }) : m;
+          });
+          self.setData({ memberDirectory: dir, targetRealName: realName });
+        } else {
+          wx.showToast({ title: r.msg || '真实姓名保存失败', icon: 'none' });
+        }
+        apply();
+      },
+      fail: () => {
+        wx.hideLoading();
+        wx.showToast({ title: '真实姓名保存失败，本次仍可导入', icon: 'none' });
+        apply();
+      }
     });
-    const adjusted = normalizePreviewToMonth([mapped], tm);
-    const source = [row.nickname, row.realName].filter(Boolean).join(' / ') || row.name;
-    const note = '匹配到「' + source + '」，已按「' + targetName + '」导入' +
-      (adjusted.dropped ? '；忽略 ' + adjusted.dropped + ' 天（该月不存在）' : '');
-    this.setData({
-      preview: adjusted.preview,
-      fullPreview: adjusted.preview,
-      targetName: targetName,
-      mappingTargetName: '',
-      showMemberSelect: false,
-      recognizedMembers: [],
-      previewNote: note
-    });
-    wx.showToast({ title: '已匹配到 ' + targetName, icon: 'success' });
-    setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
   },
   _useMatchedRows(hits, targetName, tm) {
     // 同名重复行合并；同一成员命中就直接采用，不再弹确认
@@ -427,24 +458,8 @@ Page({
     const filtered = (this.data.fullPreview || []).filter(function (p) { return p.name === name; });
     const mappingTarget = this.data.mappingTargetName;
     if (mappingTarget && filtered.length) {
-      // 目标昵称不在表里：用户选了表中对应的人 → 规范成目标成员再入库
-      const mapped = filtered.map(function (p) {
-        return Object.assign({}, p, { name: mappingTarget, displayName: getDisplayName(mappingTarget) });
-      });
-      const adjusted = normalizePreviewToMonth(mapped, this.data.targetMonth || '');
-      const note = '已将「' + (filtered[0].displayName || filtered[0].name) + '」映射为「' + mappingTarget + '」' +
-        (adjusted.dropped ? '；忽略 ' + adjusted.dropped + ' 天（该月不存在）' : '');
-      this.setData({
-        showMemberSelect: false,
-        preview: adjusted.preview,
-        fullPreview: adjusted.preview,
-        targetName: mappingTarget,
-        mappingTargetName: '',
-        recognizedMembers: [],
-        previewNote: note
-      });
-      wx.showToast({ title: '已映射到' + mappingTarget, icon: 'success' });
-      setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
+      // 目标昵称不在表里：用户选了表中对应的人 → 持久绑定真实姓名并规范成目标成员
+      this._applyMappedRow(filtered[0], mappingTarget, this.data.targetMonth || '');
       return;
     }
     this.setData({
