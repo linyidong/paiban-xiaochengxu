@@ -94,7 +94,16 @@ exports.main = async (event) => {
       }
     }
     if (!preview.length) return { ok: false, msg: '未识别到排班内容，请检查图片/表格格式', preview: preview };
-    return { ok: true, preview: preview, targetMissing: targetMissing };
+    // 把目标成员的真实姓名一并返回，避免客户端成员目录未刷新时无法自动匹配
+    let targetRealName = '';
+    if (targetName && targetName.trim() !== '全部') {
+      try {
+        const tu = await db.collection('users').where({ name: translateAlias(targetName.trim()) }).get();
+        const active = tu.data.filter(function (u) { return !u.isDeleted; })[0];
+        if (active) targetRealName = active.realName || '';
+      } catch (e) { /* 查询失败不阻塞识别 */ }
+    }
+    return { ok: true, preview: preview, targetMissing: targetMissing, targetRealName: targetRealName };
   }
 
   // ---------- 第二步：确认入库（按成员 + 月份全量替换） ----------
@@ -477,6 +486,8 @@ function parsePreview(content) {
 function translateAlias(name) {
   const t = String(name || '').trim();
   if (!t) return t;
+  // 识别模型把“王铃芳”错写成“王玲芳”，硬编码兜底，避免依赖配置是否刷新
+  if (t === '王玲芳') return '王铃芳';
   if (!MEMBER_ALIAS) return t;
   for (const formal in MEMBER_ALIAS) {
     if (t === formal) return formal;

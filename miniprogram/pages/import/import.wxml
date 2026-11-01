@@ -43,7 +43,7 @@
     <view class="member-select-list">
       <view class="member-select-item" wx:for="{{recognizedMembers}}" wx:key="name"
             data-name="{{item.name}}" bindtap="onSelectMember">
-        {{item.nickname || item.displayName}}<text wx:if="{{item.realName}}"> / {{item.realName}}</text>
+        {{item.label || item.nickname || item.displayName}}
       </view>
     </view>
     <view class="member-select-cancel" bindtap="onCancelSelect">取消</view>
