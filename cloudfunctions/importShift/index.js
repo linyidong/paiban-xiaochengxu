@@ -132,7 +132,11 @@ exports.main = async (event) => {
   const isAdmin = adminList.indexOf(cleanMe) > -1 || me.role === 'admin';
 
   const nameToId = {};
-  activeUsers.forEach(function (u) { if (u.name) nameToId[u.name] = u._id; });
+  const realToId = {};
+  activeUsers.forEach(function (u) {
+    if (u.name) nameToId[u.name] = u._id;
+    if (u.realName) realToId[u.realName] = u._id;
+  });
   const usersNames = activeUsers.map(function (u) { return u.name; });
   const formalSet2 = Object.keys(MEMBER_ALIAS || {});
 
@@ -154,6 +158,14 @@ exports.main = async (event) => {
     } else {
       finalName = p.name;
       userId = nameToId[finalName];
+      // 排班表只有真实姓名时，按成员 realName 归到已绑定昵称，避免重复建档
+      if (!userId && p.realName) {
+        const rn = translateAlias(p.realName);
+        if (realToId[rn]) {
+          const matchedUser = activeUsers.filter(function (u) { return u._id === realToId[rn]; })[0];
+          if (matchedUser) { finalName = matchedUser.name; userId = matchedUser._id; }
+        }
+      }
       // 关键：finalName 已经是正式名时，不做近似归位（防止被脏别名"成员A"抢回去）
       const isFormal2 = formalSet2.indexOf(finalName) > -1;
       if (!userId && usersNames.length && !isFormal2) {

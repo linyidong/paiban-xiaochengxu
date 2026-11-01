@@ -33,9 +33,14 @@ Page({
     bindConfirmRecognizedDisplayName: ''
   },
   onTabItemTap() {
-    // 用户直接点底部“导入”：清掉上一次从日历带入的目标/月份，显示默认入口
+    // 用户直接点底部“导入”：清掉上一次从日历带入的目标；默认当前月，避免无月份表被 AI 猜成别的月
     this._fromDirectTab = true;
     this._clearEntry();
+    this.setData({ targetMonth: this._currentMonth() });
+  },
+  _currentMonth() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   },
   _clearEntry() {
     this.setData({
@@ -79,9 +84,10 @@ Page({
         targetMonth: tm
       });
     } else if (!this._entryInitialized || this._fromDirectTab) {
-      // 首次直接进入，或用户刚点了底部“导入” → 默认入口，不显示目标
+      // 首次直接进入，或用户刚点了底部“导入” → 不显示目标，默认当前月
       this._fromDirectTab = false;
       this._clearEntry();
+      this.setData({ targetMonth: this._currentMonth() });
     }
     this._entryInitialized = true;
     this.loadMemberDirectory();
@@ -345,6 +351,19 @@ Page({
                   previewNote: ''
                 });
                 return;
+              }
+              // 管理员直接导入：已绑定成员不放进候选（避免重复建档/误绑定）
+              if (!matchTarget) {
+                matched = fullPreview.filter((p) => !this._isBoundToOther(p, ''));
+                if (!matched.length) {
+                  this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
+                  wx.showModal({
+                    title: '没有可导入的成员',
+                    content: '识别到的成员都已经绑定到系统成员，不能重复导入。请用对应成员登录后导入自己的排班。',
+                    showCancel: false
+                  });
+                  return;
+                }
               }
               // 先锁定成员，再按目标月归一化；避免把其他人的日期也计入“忽略天数”
               const monthAdjusted = normalizePreviewToMonth(matched, tm);
