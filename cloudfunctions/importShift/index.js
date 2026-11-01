@@ -377,16 +377,6 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
   if (yO && mO) {
     promptLines.push('⚠️ 本次导入目标月份是 ' + yO + ' 年 ' + mO + ' 月：year 必须输出 ' + yO + '，month 必须输出 ' + mO + '，days 只输出该月实际天数（' + daysInMonth(yO, mO) + ' 项），不要按标题里的其他年月输出。');
   }
-  // 关键：如果指定了目标成员，只锁定那一行，忽略其他所有人（防止串列/错乱）
-  if (targetName && targetName.trim() && targetName.trim() !== '全部') {
-    const tn = targetName.trim();
-    const formal = translateAlias(tn);
-    if (formal !== tn) {
-      promptLines.push('⚠️ 极其重要：只识别昵称为「' + tn + '」（人员名「' + formal + '」）的这一行，忽略表格中其他所有成员的行。只输出这一个人的数据。');
-    } else {
-      promptLines.push('⚠️ 极其重要：只识别「' + tn + '」这一行（昵称或人员名匹配即可），忽略表格中其他所有成员的行。只输出这一个人的数据。');
-    }
-  }
   const promptText = promptLines.join('');
   // 服务过载/限流自动重试（最多3次，退避递增）；只使用豆包主模型
   let content = '';
