@@ -1,0 +1,8 @@
+{
+  "AI_VISION_API_KEY": "REPLACE_WITH_ARK_API_KEY",
+  "AI_VISION_ENDPOINT": "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+  "AI_VISION_MODEL": "doubao-seed-2-1-lite-260915",
+  "AI_VISION_FALLBACK_MODEL": "",
+  "MEMBER_ALIAS": {},
+  "ADMIN_OPENIDS": []
+}
