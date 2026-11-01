@@ -5,10 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 
-test('识别到单个真实姓名时提供“按目标成员导入”确认', function () {
+test('识别命中时提供“采用这一行”确认', function () {
   const js = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/import/import.js'), 'utf8');
-  assert.ok(js.includes('成员名不一致'));
-  assert.ok(js.includes('按' + '目标成员导入') || js.includes("confirmText: '按' + wanted + '导入'"));
-  assert.ok(js.includes('已按「'));
-  assert.ok(js.includes('fullPreview.length === 1'));
+  assert.ok(js.includes('成员匹配确认'));
+  assert.ok(js.includes('采用这一行'));
+  assert.ok(js.includes('_confirmMatchedRows'));
+  assert.ok(js.includes('_rowMatchesTarget'));
 });

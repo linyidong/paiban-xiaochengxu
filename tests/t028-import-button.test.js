@@ -48,5 +48,5 @@ test('导入页读取 prefill 并只保留目标成员', function () {
   const js = fs.readFileSync(path.join(root, 'pages', 'import', 'import.js'), 'utf8');
   assert.ok(js.includes("wx.getStorageSync('importPrefill')"));
   assert.ok(js.includes('prefillName'));
-  assert.ok(js.includes('matched = hit'));
+  assert.ok(js.includes('_rowMatchesTarget'));
 });

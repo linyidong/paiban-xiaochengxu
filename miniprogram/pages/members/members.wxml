@@ -9,9 +9,10 @@
     <view class="member-row" wx:for="{{members}}" wx:key="_id">
       <view class="member-info">
         <block wx:if="{{editingId === item._id}}">
-          <input class="member-rename-input" value="{{editingName}}" bindinput="onRenameInput" focus placeholder="输入新名字" />
+          <input class="member-rename-input" value="{{editingName}}" bindinput="onRenameInput" focus placeholder="输入新昵称" />
+          <input class="member-rename-input member-realname-input" value="{{editingRealName}}" bindinput="onRealNameInput" placeholder="真实姓名（可留空）" />
           <view class="member-meta">
-            <text class="member-role">保存后立即生效；排班按成员ID关联，不会丢</text>
+            <text class="member-role">昵称和真实姓名都可修改；排班按成员ID关联，不会丢</text>
           </view>
         </block>
         <block wx:else>
@@ -22,6 +23,7 @@
               {{item.isBound ? '已绑定微信' : '未绑定'}}
             </text>
           </view>
+          <view class="member-realname">真实姓名：{{item.realName || '未绑定真实姓名'}}</view>
         </block>
       </view>
       <view class="member-actions">
@@ -31,7 +33,7 @@
         </block>
         <block wx:else>
           <view class="member-action-btn rename" wx:if="{{item.role !== 'admin'}}"
-                data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onStartRename">改名</view>
+                data-id="{{item._id}}" data-name="{{item.name}}" data-realname="{{item.realName}}" bindtap="onStartRename">改资料</view>
           <view class="member-action-btn unbind" wx:if="{{item.isBound && item.role !== 'admin'}}"
                 data-id="{{item._id}}" data-name="{{item.name}}" bindtap="onUnbind">解绑</view>
           <view class="member-action-btn remove" wx:if="{{item.role !== 'admin'}}"

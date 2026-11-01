@@ -2,7 +2,7 @@
 const { getDisplayName } = require('../../utils/shift.js');
 const { selectableMembers } = require('../../utils/member.js');
 Page({
-  data: { members: [], showAdd: false, newName: '', adding: false, editingId: '', editingName: '', renaming: false },
+  data: { members: [], showAdd: false, newName: '', adding: false, editingId: '', editingName: '', editingRealName: '', renaming: false },
   onShow() {
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) { wx.reLaunch({ url: '/pages/login/login' }); return; }
@@ -62,30 +62,35 @@ Page({
   onStartRename(e) {
     this.setData({
       editingId: e.currentTarget.dataset.id,
-      editingName: e.currentTarget.dataset.name || ''
+      editingName: e.currentTarget.dataset.name || '',
+      editingRealName: e.currentTarget.dataset.realname || ''
     });
   },
   onRenameInput(e) {
     this.setData({ editingName: e.detail.value });
   },
+  onRealNameInput(e) {
+    this.setData({ editingRealName: e.detail.value });
+  },
   onCancelRename() {
-    this.setData({ editingId: '', editingName: '', renaming: false });
+    this.setData({ editingId: '', editingName: '', editingRealName: '', renaming: false });
   },
   onSaveRename(e) {
     const id = e.currentTarget.dataset.id;
     const name = String(this.data.editingName || '').trim();
+    const realName = String(this.data.editingRealName || '').trim();
     if (!id) return;
-    if (!name) { wx.showToast({ title: '请输入新名字', icon: 'none' }); return; }
+    if (!name) { wx.showToast({ title: '请输入新昵称', icon: 'none' }); return; }
     if (this.data.renaming) return;
     this.setData({ renaming: true });
     wx.cloud.callFunction({
       name: 'manageMember',
-      data: { action: 'rename', id: id, newName: name },
+      data: { action: 'rename', id: id, newName: name, newRealName: realName },
       success: (res) => {
         const r = res.result || {};
         if (r.ok) {
-          wx.showToast({ title: r.unchanged ? '名字未变化' : '已修改', icon: 'success' });
-          this.setData({ editingId: '', editingName: '', renaming: false });
+          wx.showToast({ title: r.unchanged ? '资料未变化' : '已修改', icon: 'success' });
+          this.setData({ editingId: '', editingName: '', editingRealName: '', renaming: false });
           this.loadMembers();
         } else {
           wx.showToast({ title: r.msg || '修改失败', icon: 'none' });

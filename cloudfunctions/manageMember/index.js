@@ -43,6 +43,7 @@ exports.main = async (event) => {
         const item = {
           _id: u._id,
           name: u.name,
+          realName: u.realName || '',
           wxId: u.wxId || '',
           role: u.role,
           createdAt: u.createdAt,
@@ -156,25 +157,34 @@ exports.main = async (event) => {
   if (action === 'rename') {
     const id = event.id;
     const newName = String(event.newName || '').trim();
+    const hasRealName = event.newRealName !== undefined;
+    const newRealName = hasRealName ? String(event.newRealName || '').trim() : undefined;
     if (!id) return { ok: false, msg: '缺少成员id' };
     if (!newName) return { ok: false, msg: '请输入新名字' };
     if (newName.length > 20) return { ok: false, msg: '名字最多 20 个字符' };
     if (/[\u0000-\u001f]/.test(newName)) return { ok: false, msg: '名字不能包含控制字符' };
+    if (hasRealName && newRealName.length > 20) return { ok: false, msg: '真实姓名最多 20 个字符' };
+    if (hasRealName && /[\u0000-\u001f]/.test(newRealName)) return { ok: false, msg: '真实姓名不能包含控制字符' };
     const target = await db.collection('users').doc(id).get().catch(function () { return { data: null }; });
     if (!target.data || target.data.isDeleted) return { ok: false, msg: '成员不存在' };
     if (target.data.role === 'admin') return { ok: false, msg: '不能修改管理员名字' };
-    if (target.data.name === newName) return { ok: true, unchanged: true, name: newName };
     const oldName = target.data.name;
-    const dup = await db.collection('users').where({ name: newName }).get();
-    const others = dup.data.filter(function (u) { return u._id !== id; });
-    if (others.length) {
-      const deleted = others.filter(function (u) { return u.isDeleted; });
-      return { ok: false, msg: deleted.length ? '该姓名已存在（可能已删除）' : '该姓名已存在' };
+    const oldRealName = target.data.realName || '';
+    if (oldName === newName && (!hasRealName || oldRealName === newRealName)) {
+      return { ok: true, unchanged: true, name: newName, realName: oldRealName };
     }
-    await db.collection('users').doc(id).update({
-      data: { name: newName, updatedAt: db.serverDate() }
-    });
-    return { ok: true, name: newName, oldName: oldName };
+    if (oldName !== newName) {
+      const dup = await db.collection('users').where({ name: newName }).get();
+      const others = dup.data.filter(function (u) { return u._id !== id; });
+      if (others.length) {
+        const deleted = others.filter(function (u) { return u.isDeleted; });
+        return { ok: false, msg: deleted.length ? '该姓名已存在（可能已删除）' : '该姓名已存在' };
+      }
+    }
+    const patch = { name: newName, updatedAt: db.serverDate() };
+    if (hasRealName) patch.realName = newRealName;
+    await db.collection('users').doc(id).update({ data: patch });
+    return { ok: true, name: newName, realName: hasRealName ? newRealName : oldRealName, oldName: oldName };
   }
 
   if (action === 'remove') {

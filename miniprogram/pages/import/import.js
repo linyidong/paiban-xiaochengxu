@@ -7,6 +7,9 @@ Page({
     loading: false,
     sourceType: '',
     targetName: '',
+    // 目标昵称/真实姓名 + 成员目录（用于双重匹配、排除已绑定）
+    targetRealName: '',
+    memberDirectory: [],
     // 目标昵称不在识别表中时，记录待映射的目标成员
     mappingTargetName: '',
     // 从日历空月“导入”按钮带过来的目标成员/月份
@@ -57,6 +60,25 @@ Page({
         targetMonth: tm
       });
     }
+    this.loadMemberDirectory();
+  },
+  // 成员目录：昵称/真实姓名/是否已绑定；用于导入双重匹配与排除已绑定
+  loadMemberDirectory() {
+    wx.cloud.callFunction({
+      name: 'manageMember',
+      data: { action: 'list' },
+      success: (res) => {
+        const r = res.result || {};
+        const list = r.members || [];
+        const targetName = this.data.prefillName || this.data.boundMemberName || '';
+        const target = list.filter(function (m) { return m.name === targetName; })[0];
+        this.setData({
+          memberDirectory: list,
+          targetRealName: target ? (target.realName || '') : ''
+        });
+      },
+      fail: () => {}
+    });
   },
   // 选择目标月份（提前导入未来月份 / 补录过去月份）
   onTargetMonthChange(e) {
@@ -147,6 +169,77 @@ Page({
       }
     });
   },
+  // 排班表一行是否命中目标成员：昵称优先，真实姓名兜底
+  _rowMatchesTarget(p, targetName, targetRealName) {
+    const nickname = String(p.nickname || p.name || '').trim();
+    const realName = String(p.realName || '').trim();
+    if (nickname && (nickname === targetName || (targetRealName && nickname === targetRealName))) return true;
+    if (realName && (realName === targetName || (targetRealName && realName === targetRealName))) return true;
+    if (!nickname && !realName && p.name && (p.name === targetName || (targetRealName && p.name === targetRealName))) return true;
+    return false;
+  },
+  // 这一行是否已经被其他微信绑定（不能再给目标成员当候选）
+  _isBoundToOther(p, targetName) {
+    const nickname = String(p.nickname || p.name || '').trim();
+    const realName = String(p.realName || '').trim();
+    const dir = this.data.memberDirectory || [];
+    return dir.some(function (m) {
+      if (!m.isBound || m.name === targetName) return false;
+      const mn = String(m.name || '').trim();
+      const mr = String(m.realName || '').trim();
+      return (nickname && (mn === nickname || mr === nickname)) ||
+        (realName && (mn === realName || mr === realName)) ||
+        (!nickname && !realName && p.name && (mn === p.name || mr === p.name));
+    });
+  },
+  _applyMappedRow(row, targetName, tm) {
+    const mapped = Object.assign({}, row, {
+      name: targetName,
+      displayName: getDisplayName(targetName)
+    });
+    const adjusted = normalizePreviewToMonth([mapped], tm);
+    const source = [row.nickname, row.realName].filter(Boolean).join(' / ') || row.name;
+    const note = '匹配到「' + source + '」，已按「' + targetName + '」导入' +
+      (adjusted.dropped ? '；忽略 ' + adjusted.dropped + ' 天（该月不存在）' : '');
+    this.setData({
+      preview: adjusted.preview,
+      fullPreview: adjusted.preview,
+      targetName: targetName,
+      mappingTargetName: '',
+      showMemberSelect: false,
+      recognizedMembers: [],
+      previewNote: note
+    });
+    wx.showToast({ title: '已匹配到 ' + targetName, icon: 'success' });
+    setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
+  },
+  _confirmMatchedRows(hits, targetName, tm) {
+    if (hits.length === 1) {
+      const p = hits[0];
+      const source = [p.nickname, p.realName].filter(Boolean).join(' / ') || p.name;
+      wx.showModal({
+        title: '成员匹配确认',
+        content: '目标成员是「' + targetName + '」，排班表这一行是「' + source + '」。是否采用这一行？',
+        confirmText: '采用这一行',
+        cancelText: '取消',
+        success: (r) => {
+          if (r.confirm) this._applyMappedRow(p, targetName, tm);
+        }
+      });
+      return;
+    }
+    this.setData({
+      preview: null,
+      fullPreview: hits,
+      showMemberSelect: true,
+      recognizedMembers: hits.map(function (p) {
+        return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name };
+      }),
+      mappingTargetName: targetName,
+      targetName: '',
+      previewNote: ''
+    });
+  },
   // 上传并识别（始终识别所有人，不传 targetName）
   uploadAndRecognize(filePath, type) {
     this.setData({ loading: true, sourceType: type });
@@ -190,67 +283,38 @@ Page({
                 p.displayName = getDisplayName(p.name);
                 return p;
               });
-              // 从日历带入成员时，只保留该成员，避免导入到其他人；
-              // 未命中必须中止，绝不能回退到「识别到的第一个人」。
+              // 从日历带入成员时：先昵称、再真实姓名；命中要确认，未命中才列未绑定候选
               let matched = fullPreview;
               if (this.data.prefillName) {
                 const wanted = this.data.prefillName;
-                const hit = fullPreview.filter(function (p) {
-                  return p.name === wanted || p.displayName === wanted;
-                });
-                if (!hit.length) {
-                  // 目标昵称与排班表里的真实姓名可能不同（如「东子」vs「吴义芳」）。
-                  // 只有识别结果恰好一人时才让用户显式确认“把这行导入到目标成员”，
-                  // 绝不自动猜，也不回退到其他人。
-                  const only = fullPreview.length === 1 ? fullPreview[0] : null;
-                  if (!only) {
-                    // 多人表：列出识别到的人，让用户选“表里哪个人对应目标昵称”
-                    const members = fullPreview.map(function (p) {
-                      return { name: p.name, displayName: p.displayName || p.name };
-                    });
-                    this.setData({
-                      preview: null,
-                      fullPreview: fullPreview,
-                      showMemberSelect: true,
-                      recognizedMembers: members,
-                      mappingTargetName: wanted,
-                      targetName: '',
-                      previewNote: ''
-                    });
-                    return;
-                  }
-                  const onlyName = only.displayName || only.name;
+                const targetRealName = this.data.targetRealName || '';
+                const hits = fullPreview.filter((p) => this._rowMatchesTarget(p, wanted, targetRealName));
+                if (hits.length) {
+                  this._confirmMatchedRows(hits, wanted, tm);
+                  return;
+                }
+                const candidates = fullPreview.filter((p) => !this._isBoundToOther(p, wanted));
+                if (!candidates.length) {
+                  this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
                   wx.showModal({
-                    title: '成员名不一致',
-                    content: '目标成员是「' + wanted + '」，排班表识别到的是「' + onlyName + '」。' +
-                      '如果这是同一个人，可以把「' + onlyName + '」的排班导入到「' + wanted + '」。',
-                    confirmText: '按' + wanted + '导入',
-                    cancelText: '取消',
-                    success: (r) => {
-                      if (!r.confirm) {
-                        this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
-                        return;
-                      }
-                      const mapped = Object.assign({}, only, {
-                        name: wanted,
-                        displayName: getDisplayName(wanted)
-                      });
-                      const adjusted = normalizePreviewToMonth([mapped], tm);
-                      const note = '识别到「' + onlyName + '」，已按「' + wanted + '」导入' +
-                        (adjusted.dropped ? '；忽略 ' + adjusted.dropped + ' 天（该月不存在）' : '');
-                      this.setData({
-                        preview: adjusted.preview,
-                        fullPreview: adjusted.preview,
-                        targetName: wanted,
-                        previewNote: note
-                      });
-                      wx.showToast({ title: '已按目标成员导入', icon: 'success' });
-                      setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
-                    }
+                    title: '没有可选的排班',
+                    content: '排班表里的人都已经绑定到其他成员，不能给「' + wanted + '」重复绑定。请管理员先解绑，或确认排班表是否属于该成员。',
+                    showCancel: false
                   });
                   return;
                 }
-                matched = hit;
+                this.setData({
+                  preview: null,
+                  fullPreview: candidates,
+                  showMemberSelect: true,
+                  recognizedMembers: candidates.map(function (p) {
+                    return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name };
+                  }),
+                  mappingTargetName: wanted,
+                  targetName: '',
+                  previewNote: ''
+                });
+                return;
               }
               // 先锁定成员，再按目标月归一化；避免把其他人的日期也计入“忽略天数”
               const monthAdjusted = normalizePreviewToMonth(matched, tm);

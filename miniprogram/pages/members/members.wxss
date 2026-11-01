@@ -19,6 +19,7 @@
 .member-row:last-child { border-bottom: none; }
 .member-info { flex: 1; }
 .member-name { font-size: 32rpx; font-weight: 500; color: var(--color-text); }
+.member-realname { font-size: 26rpx; color: var(--color-text-secondary); margin-top: 8rpx; }
 .member-meta { display: flex; gap: 16rpx; margin-top: 8rpx; align-items: center; }
 .member-role { font-size: 28rpx; color: var(--color-text-secondary); }
 .member-bindstatus { font-size: 26rpx; padding: 4rpx 12rpx; border-radius: 8rpx; }
@@ -43,3 +44,4 @@
   font-size: 32rpx;
   color: var(--color-text);
 }
+.member-realname-input { margin-top: 12rpx; border-color: var(--color-border); }

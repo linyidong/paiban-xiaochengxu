@@ -353,11 +353,11 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
     '你是排班表识别助手。识别图片中的排班表格：',
     '1) 只识别表格主体区域：表头日期（横排 1~31 号）+ 左侧"分组/昵称/人员"列 + 交叉单元格班次；',
     '2) 忽略表格右侧的"小提示"说明区域，不要读取任何说明文字；',
-    '3) 成员名优先取"昵称"列，昵称为空则取"人员"列；姓名只输出汉字，不要输出任何符号或字母；',
+    '3) 必须分别输出 nickname（昵称列）和 realName（人员/真实姓名列），不要合并；昵称为空则 nickname 输出空字符串；姓名只输出汉字，不要符号或字母；',
     '4) 每个单元格是一个完整班次，必须原样照抄（如：休、正、售后、A、B、正A、正B、售A、售B、年假），禁止把"正A"拆成"正"和"A"，只输出汉字或字母，禁止任何符号、图标、数字或解释；',
     '5) 从标题识别年份与月份（如"2025年12月排岗表"→ year:2025, month:12）；标题没有年份时 year 输出当前年份；month 输出 1~12；',
     '6) 按当月实际天数输出 days 数组（如 2 月 28/29 项、4 月 30 项），无排班的格子填空字符串""，不得错位、不得漏天；',
-    '7) 只输出紧凑 JSON 数组（不要缩进换行），不要任何解释文字，格式：[{"name":"成员名","year":2025,"month":10,"days":["售A","休","","正A"]}]'
+    '7) 只输出紧凑 JSON 数组（不要缩进换行），不要任何解释文字，格式：[{"nickname":"菓菓","realName":"吴义芳","year":2025,"month":10,"days":["售A","休","","正A"]}]'
   ];
   // 用户已选目标月份：直接告诉模型按该月输出，避免把 2026-11 识别成 2025-12
   const yO = parseInt(yearOverride, 10) || 0;
@@ -408,9 +408,13 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
       const maxDay = daysInMonth(year, month);
       if (days.length < maxDay) { while (days.length < maxDay) days.push(''); }
       if (days.length > maxDay) { days = days.slice(0, maxDay); }
-      const cleanName = cleanText(p.name);
+      const nickname = cleanText(p.nickname || p.nickName || '');
+      const realName = cleanText(p.realName || p.real_name || p.person || '');
+      const cleanName = nickname || realName || cleanText(p.name);
       return {
         name: cleanName,
+        nickname: nickname,
+        realName: realName,
         year: year,
         month: month,
         rows: days.map(function (s, i) {
@@ -643,6 +647,7 @@ function parseSheetRows(rows, yearOverride, monthOverride) {
 
   // 找表头行：至少 5 个 1~31 的日期单元格
   let headerIdx = -1;
+  let headerRow = null;
   let dayCols = {};
   for (let i = 0; i < rows.length; i++) {
     const map = {};
@@ -654,22 +659,36 @@ function parseSheetRows(rows, yearOverride, monthOverride) {
       const d = parseInt(m[1], 10);
       if (d >= 1 && d <= 31) map[idx] = d;
     });
-    if (Object.keys(map).length >= 5) { headerIdx = i; dayCols = map; break; }
+    if (Object.keys(map).length >= 5) { headerIdx = i; headerRow = rows[i]; dayCols = map; break; }
   }
   if (headerIdx < 0) return [];
 
   const dateCols = Object.keys(dayCols).map(Number).sort(function (a, b) { return a - b; });
   const firstDateCol = dateCols[0];
-  const nameCols = [0, 1].filter(function (c) { return c < firstDateCol; });
-  if (!nameCols.length) nameCols.push(0);
+  // 优先按表头识别“昵称列/真实姓名列”；真实表常有 分组/昵称/人员 三列，
+  // 不能按位置硬取前两列，否则会把“VC组/草本组”当成人名。
+  let nicknameCol = -1;
+  let realNameCol = -1;
+  (headerRow || []).forEach(function (cell, idx) {
+    if (idx >= firstDateCol) return;
+    const s = String(cell == null ? '' : cell).replace(/\s+/g, '');
+    if (nicknameCol < 0 && /昵称|nickname/i.test(s)) nicknameCol = idx;
+    else if (realNameCol < 0 && /真实姓名|姓名|人员|name/i.test(s)) realNameCol = idx;
+  });
+  const fallbackCols = [0, 1].filter(function (c) { return c < firstDateCol; });
+  if (!fallbackCols.length) fallbackCols.push(0);
 
   const out = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const r = rows[i] || [];
-    let name = '';
-    for (const c of nameCols) {
-      const v = String(r[c] == null ? '' : r[c]).replace(/\s+/g, '').trim();
-      if (v && !/^\d+$/.test(v)) { name = v; break; }
+    const nickname = nicknameCol >= 0 ? cleanText(r[nicknameCol]) : '';
+    const realName = realNameCol >= 0 ? cleanText(r[realNameCol]) : '';
+    let name = nickname || realName;
+    if (!name) {
+      for (const c of fallbackCols) {
+        const v = cleanText(r[c]);
+        if (v) { name = v; break; }
+      }
     }
     if (!name) continue;
     if (/^(合计|总计|备注|说明|分组)/.test(name)) continue;
@@ -685,7 +704,7 @@ function parseSheetRows(rows, yearOverride, monthOverride) {
         shift: shift
       });
     }
-    if (shiftRows.length) out.push({ name: name, year: year, month: month, rows: shiftRows });
+    if (shiftRows.length) out.push({ name: name, nickname: nickname, realName: realName, year: year, month: month, rows: shiftRows });
   }
   return out;
 }
