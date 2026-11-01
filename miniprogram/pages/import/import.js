@@ -465,19 +465,8 @@ Page({
                 });
                 return;
               }
-              // 管理员直接导入：已绑定成员不放进候选（避免重复建档/误绑定）
-              if (!matchTarget) {
-                matched = fullPreview.filter((p) => !this._isBoundToOther(p, ''));
-                if (!matched.length) {
-                  this.setData({ preview: null, fullPreview: null, showMemberSelect: false, previewNote: '', targetName: '' });
-                  wx.showModal({
-                    title: '没有可导入的成员',
-                    content: '识别到的成员都已经绑定到系统成员，不能重复导入。请用对应成员登录后导入自己的排班。',
-                    showCancel: false
-                  });
-                  return;
-                }
-              }
+              // 管理员/无 target 的整表导入：保留全部识别结果，不再按“是否已绑定”过滤。
+              // 过滤已绑定只适用于“给某个成员选对应行”的映射场景。
               // 先锁定成员，再按目标月归一化；避免把其他人的日期也计入“忽略天数”
               const monthAdjusted = normalizePreviewToMonth(matched, tm);
               const previewAll = monthAdjusted.preview;
@@ -502,8 +491,8 @@ Page({
               if (members.length === 1) {
                 // 只有一人 → 直接显示该人预览
                 this.setData({
-                  preview: matched,
-                  fullPreview: matched,
+                  preview: previewAll,
+                  fullPreview: previewAll,
                   previewNote: previewNote,
                   targetName: members[0].name
                 });
