@@ -90,6 +90,8 @@ Page({
     // 从日历页带入：成员 + 年月；导入后自动回到该成员/月份
     const prefill = wx.getStorageSync('importPrefill');
     if (prefill && prefill.name) {
+      // 先清掉上一次导入残留的候选/遮罩/loading，再写入本次目标
+      this._clearEntry();
       wx.removeStorageSync('importPrefill');
       const tm = prefill.year + '-' + String(prefill.month).padStart(2, '0');
       this._fromDirectTab = false;
