@@ -12,7 +12,8 @@ flowchart LR
   MP -->|wx.cloud.uploadFile| CS[(云存储<br/>shift-import/)]
   MP -->|wx.cloud.init| ENV[云开发环境]
   CF --> DB[(云数据库<br/>users / shifts / memos / changeLog)]
-  CF -->|HTTPS POST| ARK[火山方舟 视觉模型]
+  CF -->|HTTPS POST 表格 OCR| TCB[腾讯云 表格识别 V3]
+  CF -->|HTTPS POST 兜底| ARK[火山方舟 视觉模型]
   CF -->|downloadFile| CS
   CF -->|getWXContext| WX[微信身份 OPENID]
 ```
@@ -25,7 +26,8 @@ flowchart LR
 | 后端 | 微信云函数（Node.js） | `wx-server-sdk ~2.6.3` | `cloudfunctions/*/package.json` |
 | 数据 | 微信云数据库 | 平台内置 | `cloud.init` + `db.collection` |
 | 存储 | 云存储 | 平台内置 | `import.js:96-99` 上传、`importShift.js:134` 下载 |
-| 外部 | 火山方舟视觉 API | `ark.cn-beijing.volces.com` | `importShift/config.json`（不入库） |
+| 外部 | 腾讯云表格 OCR V3 | `ocr.tencentcloudapi.com` | 云函数环境变量（不入库） |
+| 外部 | 火山方舟视觉 API（兜底） | `ark.cn-beijing.volces.com` | `importShift/config.json`（不入库） |
 | 部署 | 微信开发者工具上传 | — | 无 CI/CD |
 
 ## 3. 模块与边界
@@ -74,7 +76,8 @@ flowchart LR
 | 依赖 | 用途 | 配置位置 | 失败时行为 | 证据 |
 |---|---|---|---|---|
 | 微信云开发 | 函数/数据库/存储/身份 | `miniprogram/config.js` env | 全部云调用失败 | `app.js:14` |
-| 火山方舟视觉 API | 截图识别 | `cloudfunctions/importShift/config.json` | 返回假数据（配置缺失）或报错/重试 | `importShift/index.js:128-187,288-351` |
+| 腾讯云表格 OCR V3 | 截图主识别 | 云函数环境变量 | 回退火山方舟视觉识别 | `importShift/index.js` OCR 分支 |
+| 火山方舟视觉 API（兜底） | 截图兜底识别 | `cloudfunctions/importShift/config.json` | 报错/重试 | `importShift/index.js` 视觉分支 |
 | 微信选图/文件 API | 选择截图 | — | 用户取消/失败提示 | `import.js:30-85` |
 
 ## 7. 安全与权限（现状）
