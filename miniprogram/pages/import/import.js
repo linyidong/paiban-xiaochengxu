@@ -57,6 +57,7 @@ Page({
       loading: false,
       prefillName: '',
       targetName: '',
+      targetRealName: '',
       targetMonth: '',
       mappingTargetName: '',
       preview: null,
@@ -144,10 +145,8 @@ Page({
     this.setData({ targetMonth: '', previewNote: '' });
   },
   onChooseImage() {
-    if (this.data.loading) {
-      wx.showToast({ title: '上一次识别还在处理，请稍候', icon: 'none' });
-      return;
-    }
+    // 不用 loading 静默拦截：用户点了选择就必须有反馈/发起新请求
+    if (this.data.loading) this.setData({ loading: false });
     wx.showActionSheet({
       itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择', 'Excel 表格（.xlsx/.xls）'],
       success: (res) => {
