@@ -158,6 +158,21 @@ exports.main = async (event) => {
     return { ok: true, name: newName, oldName: oldName };
   }
 
+  // 设置自己的真实姓名：映射确认时不需要依赖客户端成员目录/ID
+  if (action === 'setRealNameSelf') {
+    const realName = String(event.realName || '').trim();
+    if (!realName) return { ok: false, msg: '请输入真实姓名' };
+    if (realName.length > 20) return { ok: false, msg: '真实姓名最多 20 个字符' };
+    if (/[\u0000-\u001f]/.test(realName)) return { ok: false, msg: '真实姓名不能包含控制字符' };
+    const mineRes = await db.collection('users').where({ openid: OPENID }).get();
+    const me = mineRes.data.filter(function (u) { return !u.isDeleted; })[0];
+    if (!me) return { ok: false, msg: '未绑定成员' };
+    await db.collection('users').doc(me._id).update({
+      data: { realName: realName, updatedAt: db.serverDate() }
+    });
+    return { ok: true, realName: realName, name: me.name };
+  }
+
   // 设置真实姓名：管理员可改任意成员；成员只能改自己（映射确认时持久化绑定）
   if (action === 'setRealName') {
     const id = event.id;

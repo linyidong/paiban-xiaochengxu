@@ -246,31 +246,41 @@ Page({
       setTimeout(function () { wx.pageScrollTo({ scrollTop: 99999, duration: 300 }); }, 400);
     };
     // 用户选择这一行 = 持久绑定真实姓名；下次导入才能自动匹配
-    const realName = String(row.realName || row.nickname || '').trim();
+    const realName = String(row.realName || row.nickname || row.name || '').trim();
     const target = (this.data.memberDirectory || []).filter(function (m) { return m.name === targetName; })[0];
-    if (!realName || !target) { apply(); return; }
-    if (String(target.realName || '').trim() === realName) { apply(); return; }
+    if (!realName) {
+      wx.showModal({ title: '绑定失败', content: '无法确定这一行的真实姓名，请重新选择。', showCancel: false });
+      return;
+    }
+    if (target && String(target.realName || '').trim() === realName) { apply(); return; }
+    const isSelf = String(targetName) === String(this.data.boundMemberName || '');
+    const payload = isSelf
+      ? { action: 'setRealNameSelf', realName: realName }
+      : (target ? { action: 'setRealName', id: target._id, realName: realName } : null);
+    if (!payload) {
+      wx.showModal({ title: '绑定失败', content: '找不到成员「' + targetName + '」，请返回成员管理后重试。', showCancel: false });
+      return;
+    }
     wx.showLoading({ title: '绑定真实姓名...' });
     wx.cloud.callFunction({
       name: 'manageMember',
-      data: { action: 'setRealName', id: target._id, realName: realName },
+      data: payload,
       success: (res) => {
         wx.hideLoading();
         const r = res.result || {};
-        if (r.ok) {
-          const dir = (self.data.memberDirectory || []).map(function (m) {
-            return m.name === targetName ? Object.assign({}, m, { realName: realName }) : m;
-          });
-          self.setData({ memberDirectory: dir, targetRealName: realName });
-        } else {
-          wx.showToast({ title: r.msg || '真实姓名保存失败', icon: 'none' });
+        if (!r.ok) {
+          wx.showModal({ title: '绑定失败', content: r.msg || '真实姓名保存失败，请重试。', showCancel: false });
+          return;
         }
+        const dir = (self.data.memberDirectory || []).map(function (m) {
+          return m.name === targetName ? Object.assign({}, m, { realName: realName }) : m;
+        });
+        self.setData({ memberDirectory: dir, targetRealName: realName });
         apply();
       },
       fail: () => {
         wx.hideLoading();
-        wx.showToast({ title: '真实姓名保存失败，本次仍可导入', icon: 'none' });
-        apply();
+        wx.showModal({ title: '绑定失败', content: '网络异常，真实姓名没有保存，请重试。', showCancel: false });
       }
     });
   },
