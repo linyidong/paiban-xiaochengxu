@@ -408,6 +408,7 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
     // 模型偶发返回空数组时再请求一次，避免把“这次没吐 JSON”直接当成图片无内容
     for (let attempt = 0; attempt < 2 && !list.length; attempt++) {
       try {
+        console.log('[Vision] 调用模型 ' + candidates[mi].model);
         content = await callVisionWithRetry(base64, promptText, 3, candidates[mi].model, candidates[mi].apiKey);
         list = parsePreview(content) || [];
         if (list.length) { lastErr = null; break; }
