@@ -1,6 +1,16 @@
 // 排班导入页：上传截图/表格 → 识别 → 单人自动导入 / 多人询问选谁 → 预览校对 → 确认入库
 const { getDisplayName } = require('../../utils/shift.js');
 const { normalizePreviewToMonth } = require('../../utils/month.js');
+
+function memberLabel(p) {
+  const nick = String(p.nickname || '').trim();
+  const real = String(p.realName || '').trim();
+  if (nick && real && nick !== real) return nick + '/' + real;
+  return nick || real || p.name;
+}
+function memberSubLabel() {
+  return '';
+}
 Page({
   data: {
     preview: null,  // [{name, rows:[{date, shift}]}]
@@ -222,15 +232,11 @@ Page({
         (!nickname && !realName && p.name && (mn === p.name || mr === p.name));
     });
   },
-  // 统一人员显示：昵称优先；两者都存在时使用“昵称/真实姓名”格式
   _memberLabel(p) {
-    const nick = String(p.nickname || '').trim();
-    const real = String(p.realName || '').trim();
-    if (nick && real && nick !== real) return nick + '/' + real;
-    return nick || real || p.name;
+    return memberLabel(p);
   },
   _memberSubLabel(p) {
-    return '';
+    return memberSubLabel(p);
   },
   _applyMappedRow(row, targetName, tm) {
     const self = this;
@@ -310,7 +316,7 @@ Page({
       fullPreview: candidates,
       showMemberSelect: true,
       recognizedMembers: candidates.map(function (p) {
-        return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: this._memberLabel(p), subLabel: this._memberSubLabel(p) };
+        return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: memberLabel(p), subLabel: memberSubLabel(p) };
       }),
       mappingTargetName: targetName,
       targetName: '',
@@ -342,7 +348,7 @@ Page({
       fullPreview: rows,
       showMemberSelect: true,
       recognizedMembers: rows.map(function (p) {
-        return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: this._memberLabel(p), subLabel: this._memberSubLabel(p) };
+        return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: memberLabel(p), subLabel: memberSubLabel(p) };
       }),
       mappingTargetName: targetName,
       targetName: '',
@@ -436,7 +442,7 @@ Page({
                   fullPreview: candidates,
                   showMemberSelect: true,
                   recognizedMembers: candidates.map(function (p) {
-                    return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: this._memberLabel(p), subLabel: this._memberSubLabel(p) };
+                    return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: memberLabel(p), subLabel: memberSubLabel(p) };
                   }),
                   mappingTargetName: wanted,
                   targetName: '',
@@ -464,7 +470,7 @@ Page({
                 ? ('已按 ' + tm + ' 重写日期；忽略 ' + monthAdjusted.dropped + ' 天（该月不存在）')
                 : '';
               const members = matched.map(function (p) {
-                return { name: p.name, displayName: p.displayName, label: this._memberLabel(p), subLabel: this._memberSubLabel(p) };
+                return { name: p.name, displayName: p.displayName, label: memberLabel(p), subLabel: memberSubLabel(p) };
               }, this);
               // 非管理员且有已绑定成员 → 弹出绑定确认
               if (!this.data.isAdmin && this.data.boundMemberName && members.length === 1) {
