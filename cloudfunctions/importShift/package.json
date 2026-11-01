@@ -4,7 +4,6 @@
   "main": "index.js",
   "dependencies": {
   "wx-server-sdk": "~2.6.3",
-  "xlsx": "^0.18.5",
-  "tencentcloud-sdk-nodejs-ocr": "^4.0.0"
+  "xlsx": "^0.18.5"
 }
 }

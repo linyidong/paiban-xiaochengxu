@@ -352,29 +352,16 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
   // 1. 下载图片
   const down = await cloud.downloadFile({ fileID });
   const base64 = Buffer.from(down.fileContent).toString('base64');
-  // 1.1 优先走腾讯云表格 OCR V3：按单元格行列还原，避免视觉大模型漏行
-  let list = [];
-  let ocrError = null;
-  try {
-    list = await recognizeTableByTencent(base64, yearOverride, monthOverride);
-    if (list.length) console.log('[OCR] 腾讯表格识别成功，行数=' + list.length);
-  } catch (e) {
-    ocrError = e;
-    console.warn('[OCR] 腾讯表格识别失败，回退视觉：' + e.message);
+  // 只使用管理员配置的豆包视觉模型；不使用腾讯 OCR，也不使用 DeepSeek 兜底
+  const modelCfg = await getModelSettings();
+  const candidates = modelCandidates(
+    modelCfg.primaryModel, modelCfg.primaryApiKey, '', ''
+  ).filter(function (c) { return isVisionConfigured(c.apiKey, AI_VISION_ENDPOINT, c.model); });
+  if (!candidates.length) {
+    throw new Error('识别服务未配置（豆包模型/API Key），请联系管理员');
   }
-  // 未配置腾讯云或 OCR 失败时才回退现有视觉模型
-  if (!list.length) {
-    const modelCfg = await getModelSettings();
-    const candidates = modelCandidates(
-      modelCfg.primaryModel, modelCfg.primaryApiKey, modelCfg.fallbackModel, modelCfg.fallbackApiKey
-    ).filter(function (c) { return isVisionConfigured(c.apiKey, AI_VISION_ENDPOINT, c.model); });
-    if (!candidates.length) {
-      throw new Error(ocrError
-        ? ('表格 OCR 失败且视觉识别未配置：' + ocrError.message)
-        : '识别服务未配置（腾讯云 OCR 或视觉 API Key），请联系管理员');
-    }
-    // 2. 调用视觉 API
-    const promptLines = [
+  // 2. 调用视觉 API
+  const promptLines = [
     '你是排班表识别助手。识别图片中的排班表格：',
     '1) 只识别表格主体区域：表头日期（横排 1~31 号）+ 左侧"分组/昵称/人员"列 + 交叉单元格班次；',
     '2) 忽略表格右侧的"小提示"说明区域，不要读取任何说明文字；',
@@ -401,9 +388,10 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
     }
   }
   const promptText = promptLines.join('');
-  // 服务过载/限流自动重试（最多3次，退避递增）；主模型失败后自动尝试备用模型
+  // 服务过载/限流自动重试（最多3次，退避递增）；只使用豆包主模型
   let content = '';
   let lastErr = null;
+  let list = [];
   for (let mi = 0; mi < candidates.length && !list.length; mi++) {
     // 模型偶发返回空数组时再请求一次，避免把“这次没吐 JSON”直接当成图片无内容
     for (let attempt = 0; attempt < 2 && !list.length; attempt++) {
@@ -418,8 +406,7 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
       }
     }
   }
-  if (!list.length) throw new Error('主/备模型均识别失败：' + (lastErr ? lastErr.message : 'AI 未返回可解析内容'));
-  }
+  if (!list.length) throw new Error('豆包模型识别失败：' + (lastErr ? lastErr.message : 'AI 未返回可解析内容'));
   // 4. 转成 preview 结构：days 按当月天数展开为日期；班次做常见误读归一化
   const nowY = new Date().getFullYear();
   const curM = new Date().getMonth() + 1;
@@ -458,126 +445,6 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
 }
 
 // 清理识别文本中的乱码/特殊符号（白名单：只保留中文、字母、数字，其他一律过滤）
-// 腾讯云表格 OCR V3：把图片交给专用表格识别，返回单元格行列坐标，避免视觉大模型漏行。
-// 依赖环境变量 TENCENT_SECRET_ID / TENCENT_SECRET_KEY；未配置时返回空数组，由调用方回退视觉模型。
-async function recognizeTableByTencent(base64, yearOverride, monthOverride) {
-  const secretId = process.env.TENCENT_SECRET_ID;
-  const secretKey = process.env.TENCENT_SECRET_KEY;
-  if (!secretId || !secretKey) {
-    console.warn('[OCR] TENCENT_SECRET_ID/KEY 未配置，回退视觉识别');
-    return [];
-  }
-  // 允许临时关闭：TENCENT_OCR_ENABLED=0
-  if (process.env.TENCENT_OCR_ENABLED === '0') return [];
-  let tencentcloud;
-  try { tencentcloud = require('tencentcloud-sdk-nodejs-ocr'); } catch (e) {
-    console.warn('[OCR] SDK 加载失败：' + e.message);
-    return [];
-  }
-  const OcrClient = tencentcloud.ocr.v20181119.Client;
-  const client = new OcrClient({
-    credential: { secretId: secretId, secretKey: secretKey },
-    region: process.env.TENCENT_OCR_REGION || 'ap-guangzhou',
-    profile: { httpProfile: { endpoint: 'ocr.tencentcloudapi.com', reqTimeout: 30 } }
-  });
-  const resp = await client.RecognizeTableAccurateOCR({
-    ImageBase64: base64,
-    UseNewModel: true
-  });
-  return parseTencentTable(resp, yearOverride, monthOverride);
-}
-
-function parseTencentTable(resp, yearOverride, monthOverride) {
-  const detections = (resp && resp.TableDetections) || [];
-  if (!detections.length) return [];
-  const det = detections.slice().sort(function (a, b) {
-    return ((b.Cells || []).length) - ((a.Cells || []).length);
-  })[0];
-  const cells = det.Cells || [];
-  if (!cells.length) return [];
-
-  const grid = {};
-  let minR = Infinity, maxR = -1, minC = Infinity, maxC = -1;
-  cells.forEach(function (c) {
-    const r = Number(c.RowTl);
-    const col = Number(c.ColTl);
-    if (!Number.isFinite(r) || !Number.isFinite(col)) return;
-    grid[r + ',' + col] = cleanText(c.Text || '');
-    if (r < minR) minR = r;
-    if (r > maxR) maxR = r;
-    if (col < minC) minC = col;
-    if (col > maxC) maxC = col;
-  });
-  if (maxR < 0 || maxC < 0) return [];
-  const cell = function (r, c) { return grid[r + ',' + c] || ''; };
-
-  // 找数字日期表头行（1号/2号…或 1/2…）
-  let dateRow = -1, dateCount = 0;
-  for (let r = minR; r <= maxR; r++) {
-    let n = 0;
-    for (let c = minC; c <= maxC; c++) {
-      const t = cell(r, c);
-      const mm = t.match(/^(\d{1,2})\s*号?$/);
-      const d = mm ? Number(mm[1]) : 0;
-      if (d >= 1 && d <= 31) n++;
-    }
-    if (n > dateCount) { dateCount = n; dateRow = r; }
-  }
-  if (dateRow < 0 || dateCount < 2) return [];
-  const dateCols = [];
-  for (let c = minC; c <= maxC; c++) {
-    const mm = cell(dateRow, c).match(/^(\d{1,2})\s*号?$/);
-    const d = mm ? Number(mm[1]) : 0;
-    if (d >= 1 && d <= 31) dateCols.push({ day: d, col: c });
-  }
-  dateCols.sort(function (a, b) { return a.day - b.day; });
-
-  // 找昵称/人员列（表头可能在日期行上方）
-  let nicknameCol = -1, realNameCol = -1, nameCol = -1;
-  for (let r = minR; r <= dateRow; r++) {
-    for (let c = minC; c <= maxC; c++) {
-      const t = cell(r, c).replace(/\s/g, '');
-      if (!t) continue;
-      if (/^昵称$|nickname/i.test(t)) nicknameCol = c;
-      else if (/^(人员|姓名|真实姓名|名字|name)$/.test(t) || /真实姓名/.test(t)) realNameCol = c;
-    }
-  }
-  if (nicknameCol < 0 && realNameCol < 0) {
-    for (let c = minC; c <= maxC; c++) {
-      if (dateCols.some(function (x) { return x.col === c; })) continue;
-      if (cell(dateRow, c)) continue;
-      nameCol = c;
-      break;
-    }
-  }
-
-  const now = new Date();
-  const y = parseInt(yearOverride, 10) || now.getFullYear();
-  const m = parseInt(monthOverride, 10) || (now.getMonth() + 1);
-  const maxDay = daysInMonth(y, m);
-  const out = [];
-  for (let r = dateRow + 1; r <= maxR; r++) {
-    const nickname = nicknameCol >= 0 ? cell(r, nicknameCol) : '';
-    const realName = realNameCol >= 0 ? cell(r, realNameCol) : '';
-    const fallback = nameCol >= 0 ? cell(r, nameCol) : '';
-    const rawName = nickname || realName || fallback;
-    if (!rawName || /^(人员|姓名|昵称|真实姓名|分组|组别|合计|备注)$/.test(rawName)) continue;
-    const days = new Array(maxDay).fill('');
-    dateCols.forEach(function (d) {
-      if (d.day <= maxDay) days[d.day - 1] = cell(r, d.col);
-    });
-    if (!days.some(function (s) { return !!s; })) continue;
-    out.push({
-      nickname: nickname,
-      realName: realName || (nicknameCol < 0 ? rawName : ''),
-      year: y,
-      month: m,
-      days: days
-    });
-  }
-  return out;
-}
-
 function cleanText(s) {
   return String(s || '').replace(/[^\u4e00-\u9fa5A-Za-z0-9]/g, '').trim();
 }
@@ -870,6 +737,5 @@ async function parseExcel(fileID) {
 
 // 暴露纯函数给单元测试（不影响云函数入口）
 exports._parseSheetRows = parseSheetRows;
-exports._parseTencentTable = parseTencentTable;
 exports._isVisionConfigured = isVisionConfigured;
 exports._modelCandidates = modelCandidates;
