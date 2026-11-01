@@ -357,8 +357,10 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
   let ocrError = null;
   try {
     list = await recognizeTableByTencent(base64, yearOverride, monthOverride);
+    if (list.length) console.log('[OCR] 腾讯表格识别成功，行数=' + list.length);
   } catch (e) {
     ocrError = e;
+    console.warn('[OCR] 腾讯表格识别失败，回退视觉：' + e.message);
   }
   // 未配置腾讯云或 OCR 失败时才回退现有视觉模型
   if (!list.length) {
@@ -460,11 +462,17 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
 async function recognizeTableByTencent(base64, yearOverride, monthOverride) {
   const secretId = process.env.TENCENT_SECRET_ID;
   const secretKey = process.env.TENCENT_SECRET_KEY;
-  if (!secretId || !secretKey) return [];
+  if (!secretId || !secretKey) {
+    console.warn('[OCR] TENCENT_SECRET_ID/KEY 未配置，回退视觉识别');
+    return [];
+  }
   // 允许临时关闭：TENCENT_OCR_ENABLED=0
   if (process.env.TENCENT_OCR_ENABLED === '0') return [];
   let tencentcloud;
-  try { tencentcloud = require('tencentcloud-sdk-nodejs-ocr'); } catch (e) { return []; }
+  try { tencentcloud = require('tencentcloud-sdk-nodejs-ocr'); } catch (e) {
+    console.warn('[OCR] SDK 加载失败：' + e.message);
+    return [];
+  }
   const OcrClient = tencentcloud.ocr.v20181119.Client;
   const client = new OcrClient({
     credential: { secretId: secretId, secretKey: secretKey },
