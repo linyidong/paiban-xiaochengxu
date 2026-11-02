@@ -415,6 +415,7 @@ Page({
       previewNote: ''
     });
     this.setData({ loading: true, sourceType: type });
+    this._lastPreview = null;
     this._startRecognizeTimer();
     wx.showLoading({ title: '识别中... 0s', mask: true });
     let ext = '.xlsx';
@@ -464,6 +465,7 @@ Page({
                 p.displayName = getDisplayName(p.name);
                 return p;
               });
+              this._lastPreview = fullPreview;
               // 服务端直接返回目标真实姓名，避免客户端目录未刷新导致“未绑定”
               if (r.targetRealName) this.setData({ targetRealName: r.targetRealName });
               try {
@@ -581,7 +583,24 @@ Page({
               showCancel: false
             });
           },
-          complete: () => this._stopRecognizeTimer(this._recognizeOutcome || '结束')
+          complete: () => {
+            this._stopRecognizeTimer(this._recognizeOutcome || '结束');
+            // 兜底：识别已成功返回，但页面被生命周期/旧状态清掉时，强制展示候选
+            setTimeout(() => {
+              if (this.data.loading) return;
+              if (this.data.preview || this.data.showMemberSelect || this.data.showBindConfirm) return;
+              const list = this._lastPreview || [];
+              if (!list.length) return;
+              this.setData({
+                fullPreview: list,
+                showMemberSelect: true,
+                recognizedMembers: list.map(function (p) {
+                  return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: memberLabel(p), subLabel: memberSubLabel(p) };
+                }),
+                previewNote: ''
+              });
+            }, 300);
+          }
         });
       },
       fail: () => {
