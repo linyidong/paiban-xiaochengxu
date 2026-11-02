@@ -119,6 +119,7 @@
   box-shadow: 0 8rpx 40rpx rgba(20,35,31,0.15);
 }
 .member-select-title { text-align: center; font-size: 32rpx; font-weight: 600; margin-bottom: 24rpx; color: var(--color-text); }
+.member-select-scroll { max-height: 60vh; }
 .member-select-list { display: flex; flex-wrap: wrap; }
 .member-select-item {
   width: 50%; text-align: center; padding: 24rpx 0; font-size: 30rpx; color: var(--color-text);

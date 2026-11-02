@@ -70,14 +70,21 @@ exports.main = async (event) => {
       // 关键：t 已经是正式名（别名表的标准名）时，不再做近似校正
       // 防止 users 表里的脏别名（如"成员A"）把正式名"成员A"又改回去
       const isFormal = formalSet.indexOf(t) > -1;
-      return { name: (users.length && !isFormal) ? normalizeName(t, users) : t, month: p.month, rows: p.rows };
+      const mappedName = (users.length && !isFormal) ? normalizeName(t, users) : t;
+      return {
+        name: mappedName,
+        nickname: cleanText(p.nickname || ''),
+        realName: cleanText(p.realName || ''),
+        month: p.month,
+        rows: p.rows
+      };
     });
     // 翻译/校正后同名合并去重（防止 AI 把同一人拆成多行，如"成员A"×3 → 成员A×1）
     const merged = {};
     preview.forEach(function (p) {
       if (!p.name) return;
       if (merged[p.name]) { merged[p.name].rows = merged[p.name].rows.concat(p.rows); }
-      else { merged[p.name] = { name: p.name, month: p.month, rows: p.rows }; }
+      else { merged[p.name] = { name: p.name, nickname: p.nickname, realName: p.realName, month: p.month, rows: p.rows }; }
     });
     preview = Object.keys(merged).map(function (k) { return merged[k]; });
     // 先取目标/当前成员真实姓名，再做“整表识别 → 只保留绑定人员”的服务端拦截
