@@ -103,8 +103,8 @@ Page({
   onRemove(e) {    const id = e.currentTarget.dataset.id;
     const name = e.currentTarget.dataset.name;
     wx.showModal({
-      title: '移除成员',
-      content: '确定删除 ' + name + '？将永久删除该成员的排班、备忘录和绑定信息，无法恢复。',
+      title: '删除成员',
+      content: '确定要删除成员「' + name + '」吗？',
       confirmColor: '#EF4444',
       success: (r) => {
         if (!r.confirm) return;
