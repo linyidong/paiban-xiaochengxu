@@ -15,6 +15,9 @@ Page({
   data: {
     preview: null,  // [{name, rows:[{date, shift}]}]
     loading: false,
+    recognizeSeconds: 0,
+    lastRecognizeSeconds: 0,
+    lastRecognizeStatus: '',
     sourceType: '',
     targetName: '',
     // 目标昵称/真实姓名 + 成员目录（用于双重匹配、排除已绑定）
@@ -369,6 +372,38 @@ Page({
       previewNote: ''
     });
   },
+  // 识别计时：每秒更新遮罩标题，结束后保留真实耗时与结果
+  _startRecognizeTimer() {
+    this._recognizeStart = Date.now();
+    this._recognizeOutcome = '';
+    this._recognizeTimer = setInterval(() => {
+      if (!this._recognizeStart) return;
+      const sec = Math.max(0, Math.floor((Date.now() - this._recognizeStart) / 1000));
+      this.setData({ recognizeSeconds: sec });
+      try {
+        wx.showLoading({ title: '识别中... ' + sec + 's', mask: true });
+      } catch (e) {}
+    }, 1000);
+  },
+  _stopRecognizeTimer(status) {
+    if (!this._recognizeStart && !this._recognizeTimer) return;
+    if (this._recognizeTimer) { clearInterval(this._recognizeTimer); this._recognizeTimer = null; }
+    const sec = this._recognizeStart
+      ? Math.max(1, Math.round((Date.now() - this._recognizeStart) / 1000)) : 0;
+    this._recognizeStart = 0;
+    wx.hideLoading();
+    this.setData({
+      loading: false,
+      recognizeSeconds: sec,
+      lastRecognizeSeconds: sec,
+      lastRecognizeStatus: status || '结束'
+    });
+    try {
+      wx.setStorageSync('lastRecognizeLog', {
+        seconds: sec, status: status || '结束', at: Date.now()
+      });
+    } catch (e) {}
+  },
   // 上传并识别（始终识别所有人，不传 targetName）
   uploadAndRecognize(filePath, type) {
     // 清空上一次识别的残留，避免第二次导入被旧候选/旧预览干扰
@@ -380,7 +415,8 @@ Page({
       previewNote: ''
     });
     this.setData({ loading: true, sourceType: type });
-    wx.showLoading({ title: '识别中...', mask: true });
+    this._startRecognizeTimer();
+    wx.showLoading({ title: '识别中... 0s', mask: true });
     let ext = '.xlsx';
     if (type === 'image') {
       const m = filePath.match(/\.([a-zA-Z0-9]+)$/);
@@ -416,8 +452,12 @@ Page({
           name: 'importShift',
           data: data,
           success: (res) => {
-            wx.hideLoading();
             const r = res.result || {};
+            const outcome = (r.ok && r.preview && r.preview.length)
+              ? ('成功，' + r.preview.length + ' 人')
+              : ('失败：' + (r.msg || '未识别到内容'));
+            this._recognizeOutcome = outcome;
+            this._stopRecognizeTimer(outcome);
             if (r.ok && r.preview && r.preview.length) {
               // 为每个成员添加 displayName
               const fullPreview = r.preview.map(function (p) {
@@ -521,6 +561,7 @@ Page({
                 });
               }
               } catch (e) {
+                this.setData({ lastRecognizeStatus: '异常：' + ((e && e.message) || '客户端处理失败') });
                 wx.showModal({
                   title: '识别结果处理失败',
                   content: (e && e.message) ? e.message : '客户端处理识别结果异常，请重试',
@@ -531,18 +572,21 @@ Page({
               wx.showModal({ title: '未识别到内容', content: r.msg || '请检查图片/表格格式', showCancel: false });
             }
           },
-          fail: (err) => { wx.hideLoading(); wx.showModal({
-            title: '识别失败',
-            content: (err && err.errMsg) ? err.errMsg : '云函数调用失败，请检查网络或稍后重试',
-            showCancel: false
-          }); },
-          complete: () => { wx.hideLoading(); this.setData({ loading: false }); }
+          fail: (err) => {
+            this._recognizeOutcome = '请求失败';
+            this._stopRecognizeTimer('请求失败');
+            wx.showModal({
+              title: '识别失败',
+              content: (err && err.errMsg) ? err.errMsg : '云函数调用失败，请检查网络或稍后重试',
+              showCancel: false
+            });
+          },
+          complete: () => this._stopRecognizeTimer(this._recognizeOutcome || '结束')
         });
       },
       fail: () => {
-        wx.hideLoading();
+        this._stopRecognizeTimer('上传失败');
         wx.showToast({ title: '上传失败', icon: 'none' });
-        this.setData({ loading: false });
       }
     });
   },

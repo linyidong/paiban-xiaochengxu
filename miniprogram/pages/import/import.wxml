@@ -32,6 +32,10 @@
     <view class="import-actions">
       <button class="btn-primary import-btn" bindtap="onChooseImage">选择排班截图 / Excel</button>
     </view>
+    <view class="recognize-timer" wx:if="{{loading}}">识别中：{{recognizeSeconds}} 秒</view>
+    <view class="recognize-timer last" wx:if="{{!loading && lastRecognizeSeconds}}">
+      上次识别：{{lastRecognizeSeconds}} 秒 · {{lastRecognizeStatus}}
+    </view>
   </view>
 
   <!-- 多人识别：选择要导入谁的排班 -->
