@@ -7,6 +7,6 @@ const ROOT = path.join(__dirname, '..');
 
 test('importShift 归一化 preview 时保留昵称和真实姓名', function () {
   const js = fs.readFileSync(path.join(ROOT, 'cloudfunctions', 'importShift', 'index.js'), 'utf8');
-  assert.ok(js.includes('nickname: cleanText(p.nickname'));
-  assert.ok(js.includes('realName: cleanText(p.realName'));
+  assert.ok(js.includes('nickname: translateAlias(cleanText(p.nickname'));
+  assert.ok(js.includes('realName: translateAlias(cleanText(p.realName'));
 });

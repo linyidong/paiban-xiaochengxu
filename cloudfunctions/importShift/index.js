@@ -73,8 +73,8 @@ exports.main = async (event) => {
       const mappedName = (users.length && !isFormal) ? normalizeName(t, users) : t;
       return {
         name: mappedName,
-        nickname: cleanText(p.nickname || ''),
-        realName: cleanText(p.realName || ''),
+        nickname: translateAlias(cleanText(p.nickname || '')),
+        realName: translateAlias(cleanText(p.realName || '')),
         month: p.month,
         rows: p.rows
       };
@@ -86,7 +86,14 @@ exports.main = async (event) => {
       if (merged[p.name]) { merged[p.name].rows = merged[p.name].rows.concat(p.rows); }
       else { merged[p.name] = { name: p.name, nickname: p.nickname, realName: p.realName, month: p.month, rows: p.rows }; }
     });
-    preview = Object.keys(merged).map(function (k) { return merged[k]; });
+    // 同一成员的多份行按日期去重，避免 31 天 × 3 份变成 93 行
+    preview = Object.keys(merged).map(function (k) {
+      const p = merged[k];
+      const byDate = {};
+      (p.rows || []).forEach(function (r) { if (r && r.date) byDate[r.date] = r; });
+      p.rows = Object.keys(byDate).sort().map(function (d) { return byDate[d]; });
+      return p;
+    });
     // 先取目标/当前成员真实姓名，再做“整表识别 → 只保留绑定人员”的服务端拦截
     let targetMissing = false;
     let boundMissing = false;
@@ -451,8 +458,8 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
       const maxDay = daysInMonth(year, month);
       if (days.length < maxDay) { while (days.length < maxDay) days.push(''); }
       if (days.length > maxDay) { days = days.slice(0, maxDay); }
-      const nickname = cleanText(p.nickname || p.nickName || '');
-      const realName = cleanText(p.realName || p.real_name || p.person || '');
+      const nickname = translateAlias(cleanText(p.nickname || p.nickName || ''));
+      const realName = translateAlias(cleanText(p.realName || p.real_name || p.person || ''));
       const cleanName = nickname || realName || cleanText(p.name);
       return {
         name: cleanName,
