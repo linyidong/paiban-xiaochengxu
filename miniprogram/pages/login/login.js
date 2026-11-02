@@ -3,6 +3,23 @@ const app = getApp();
 const { getDisplayName } = require('../../utils/shift.js');
 const { selectableMembers } = require('../../utils/member.js');
 const { ensurePrivacy } = require('../../utils/privacy.js');
+
+function importMemberLabel(p) {
+  const nick = String(p.nickname || '').trim();
+  const real = String(p.realName || '').trim();
+  if (nick && real && nick !== real) return '昵称「' + nick + '」-真实姓名「' + real + '」';
+  if (real) return '真实姓名「' + real + '」';
+  if (nick) return '昵称「' + nick + '」';
+  return p.name;
+}
+function importMemberNickname(p) {
+  const nick = String(p.nickname || '').trim();
+  const real = String(p.realName || '').trim();
+  // 只有“昵称和真实姓名不同”才认为是独立昵称；只有真实姓名/两者相同时不自动填
+  if (nick && real && nick !== real) return nick;
+  if (nick && !real) return nick;
+  return '';
+}
 Page({
   data: {
     loading: false,
@@ -20,6 +37,7 @@ Page({
     // 导入排班
     importLoading: false,
     importPreview: null,
+    importPreviewLabel: '',
     importTargetName: '',
     importFullPreview: null,
     showMemberSelect: false,
@@ -375,15 +393,20 @@ Page({
             if (r.ok && r.preview && r.preview.length) {
               const fullPreview = r.preview.map(function (p) {
                 p.displayName = getDisplayName(p.name);
+                p.label = importMemberLabel(p);
                 return p;
               });
-              const members = fullPreview.map(function (p) { return { name: p.name, displayName: p.displayName }; });
+              const members = fullPreview.map(function (p) {
+                return { name: p.name, displayName: p.displayName, nickname: p.nickname || '', realName: p.realName || '', label: p.label };
+              });
               if (members.length === 1) {
                 this.setData({
                   importPreview: fullPreview,
                   importFullPreview: fullPreview,
+                  importPreviewLabel: fullPreview[0].label,
                   importTargetName: members[0].name,
-                  importBindName: members[0].displayName
+                  // 有昵称才自动填；只有真实姓名的表保持为空
+                  importBindName: importMemberNickname(fullPreview[0])
                 });
                 wx.showToast({ title: '识别成功', icon: 'success' });
               } else {
@@ -418,11 +441,14 @@ Page({
     const name = e.currentTarget.dataset.name;
     const filtered = (this.data.importFullPreview || []).filter(function (p) { return p.name === name; });
     const dn = getDisplayName(name);
+    const selected = filtered[0] || {};
     this.setData({
       showMemberSelect: false,
       importPreview: filtered,
+      importPreviewLabel: selected.label || dn,
       importTargetName: name,
-      importBindName: dn,
+      // 有昵称才自动填；只有真实姓名时为空
+      importBindName: importMemberNickname(selected),
       recognizedMembers: [],
       importFullPreview: null
     });

@@ -74,7 +74,7 @@
     <view class="member-select-list">
       <view class="member-select-item" wx:for="{{recognizedMembers}}" wx:key="name"
             data-name="{{item.name}}" bindtap="onSelectImportMember">
-        {{item.displayName}}<text wx:if="{{item.displayName !== item.name}}">（{{item.name}}）</text>
+        {{item.label || item.displayName}}
       </view>
     </view>
     <view class="member-select-cancel" bindtap="onCancelSelect">取消</view>
@@ -82,10 +82,10 @@
 
   <!-- 导入排班：预览确认 -->
   <view class="card import-preview-card" wx:if="{{importPreview}}">
-    <view class="preview-title">识别结果预览<text wx:if="{{importTargetName}}">（{{importTargetName}}）</text></view>
+    <view class="preview-title">识别结果预览：{{importPreviewLabel || importTargetName}}</view>
     <view class="preview-tip">识别可能有误差，点按班次可循环切换</view>
     <view class="member-preview" wx:for="{{importPreview}}" wx:key="name" wx:for-index="idx">
-      <view class="member-name">{{item.displayName}}<text wx:if="{{item.displayName !== item.name}}">（{{item.name}}）</text></view>
+      <view class="member-name">{{item.label || item.displayName}}</view>
       <view class="shift-tags">
         <view class="shift-tag" wx:for="{{item.rows}}" wx:for-item="row" wx:key="date"
               data-idx="{{idx}}" data-date="{{row.date}}" bindtap="onFixImportShift">
