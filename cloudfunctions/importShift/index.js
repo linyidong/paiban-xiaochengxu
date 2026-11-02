@@ -58,9 +58,11 @@ exports.main = async (event) => {
     // 姓名统一：① 别名翻译无条件执行（来自参数表，不依赖成员登记）；
     //           ② 匹配已登记成员（有登记则做形近字校正，保证入库能命中）
     let users = [];
+    let activeUsers = [];
     try {
       const usersRes = await db.collection('users').limit(100).get();
-      users = usersRes.data.filter(function (u) { return u.name && !u.isDeleted; }).map(function (u) { return u.name; });
+      activeUsers = usersRes.data.filter(function (u) { return u.name && !u.isDeleted; });
+      users = activeUsers.map(function (u) { return u.name; });
     } catch (e) { /* users 查询失败不阻塞识别 */ }
     const formalNames = Object.keys(MEMBER_ALIAS || {}).concat(users);
     const formalSet = Object.keys(MEMBER_ALIAS || {});
@@ -100,19 +102,35 @@ exports.main = async (event) => {
     let targetMissing = false;
     let boundMissing = false;
     let targetRealName = '';
+    let targetUser = null;
     if (targetName && targetName.trim() !== '全部') {
       try {
         const tu = await db.collection('users').where({ name: translateAlias(targetName.trim()) }).get();
         const active = tu.data.filter(function (u) { return !u.isDeleted; })[0];
-        if (active) targetRealName = active.realName || '';
+        if (active) { targetUser = active; targetRealName = active.realName || ''; }
       } catch (e) { /* 查询失败不阻塞识别 */ }
     }
     if (!targetRealName) {
       try {
         const meRes = await db.collection('users').where({ openid: OPENID }).get();
         const me = meRes.data.filter(function (u) { return !u.isDeleted; })[0];
-        if (me) targetRealName = me.realName || '';
+        if (me) { if (!targetUser) targetUser = me; targetRealName = me.realName || ''; }
       } catch (e) { /* 查询失败不阻塞识别 */ }
+    }
+    // 排除已经被其他成员绑定的昵称/真实姓名，防止新成员抢绑他人
+    if (targetName && targetName.trim() !== '全部') {
+      preview = preview.filter(function (p) {
+        const nick = cleanText(p.nickname || p.name || '');
+        const real = cleanText(p.realName || '');
+        return !activeUsers.some(function (u) {
+          if (!u.openid) return false;
+          if (targetUser && u._id === targetUser._id) return false;
+          const un = cleanText(u.name || '');
+          const ur = cleanText(u.realName || '');
+          return (nick && (un === nick || ur === nick)) ||
+            (real && (un === real || ur === real));
+        });
+      });
     }
     // 按导入对象过滤：输入姓名 → 只取该成员的排班；填"全部"/留空 → 整表
     if (targetName && targetName.trim() !== '全部') {
