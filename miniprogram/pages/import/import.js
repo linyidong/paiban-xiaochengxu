@@ -44,6 +44,7 @@ Page({
   },
   onTabItemTap() {
     // 用户直接点底部“导入”：清掉上一次从日历带入的目标；默认当前月，避免无月份表被 AI 猜成别的月
+    wx.hideLoading();
     this._fromDirectTab = true;
     this._clearEntry();
     this.setData({ targetMonth: this._currentMonth() });
@@ -68,8 +69,8 @@ Page({
     });
   },
   onShow() {
-    // 页面每次重新展示都复位 loading：第一次导入成功/切 tab/日历带入后，
-    // 不能让旧的“识别中”状态把第二次点击静默挡住
+    // 页面每次重新展示都清掉可能残留的全局加载遮罩并复位 loading
+    wx.hideLoading();
     this.setData({ loading: false });
     const session = wx.getStorageSync('session');
     if (!session || !session.openid) wx.reLaunch({ url: '/pages/login/login' });
@@ -147,6 +148,7 @@ Page({
     this.setData({ targetMonth: '', previewNote: '' });
   },
   onChooseImage() {
+    wx.hideLoading();
     // 不用 loading 静默拦截：用户点了选择就必须有反馈/发起新请求
     if (this.data.loading) this.setData({ loading: false });
     wx.showActionSheet({
@@ -156,7 +158,8 @@ Page({
         else if (res.tapIndex === 1) this.chooseFromChatImage();
         else if (res.tapIndex === 2) this.chooseFromChat();
         else this.chooseFromExcel();
-      }
+      },
+      fail: () => this.chooseFromAlbum()
     });
   },
   chooseFromAlbum() {
