@@ -148,9 +148,11 @@ Page({
     this.setData({ targetMonth: '', previewNote: '' });
   },
   onChooseImage() {
-    wx.hideLoading();
-    // 不用 loading 静默拦截：用户点了选择就必须有反馈/发起新请求
-    if (this.data.loading) this.setData({ loading: false });
+    // 识别中禁止再次选图：重复点击会 hideLoading 并重开请求，导致旧请求结果被丢弃
+    if (this.data.loading) {
+      wx.showToast({ title: '正在识别，请稍候', icon: 'none' });
+      return;
+    }
     wx.showActionSheet({
       itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择', 'Excel 表格（.xlsx/.xls）'],
       success: (res) => {
