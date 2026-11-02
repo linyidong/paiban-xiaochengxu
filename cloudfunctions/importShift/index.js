@@ -71,10 +71,12 @@ exports.main = async (event) => {
       // 防止 users 表里的脏别名（如"成员A"）把正式名"成员A"又改回去
       const isFormal = formalSet.indexOf(t) > -1;
       const mappedName = (users.length && !isFormal) ? normalizeName(t, users) : t;
+      const nickname = translateAlias(cleanText(p.nickname || ''));
+      const realName = translateAlias(cleanText(p.realName || ''));
       return {
         name: mappedName,
-        nickname: translateAlias(cleanText(p.nickname || '')),
-        realName: translateAlias(cleanText(p.realName || '')),
+        nickname: nickname || nicknameFromAlias(realName),
+        realName: realName,
         month: p.month,
         rows: p.rows
       };
@@ -460,10 +462,11 @@ async function recognizeImage(fileID, targetName, yearOverride, monthOverride) {
       if (days.length > maxDay) { days = days.slice(0, maxDay); }
       const nickname = translateAlias(cleanText(p.nickname || p.nickName || ''));
       const realName = translateAlias(cleanText(p.realName || p.real_name || p.person || ''));
-      const cleanName = nickname || realName || cleanText(p.name);
+      const filledNickname = nickname || nicknameFromAlias(realName);
+      const cleanName = filledNickname || realName || cleanText(p.name);
       return {
         name: cleanName,
-        nickname: nickname,
+        nickname: filledNickname,
         realName: realName,
         year: year,
         month: month,
@@ -519,6 +522,18 @@ function parsePreview(content) {
 
 // 别名翻译：把昵称/人员名等所有叫法统一到正式名（映射表来自人工必填参数清单）
 // 例：MEMBER_ALIAS = {"成员A": ["成员A", "别名A"], "成员B": ["成员B"]} → 成员A/别名A → 成员A
+function nicknameFromAlias(realName) {
+  const key = String(realName || '').trim();
+  if (!key || !MEMBER_ALIAS || !MEMBER_ALIAS[key]) return '';
+  const list = MEMBER_ALIAS[key] || [];
+  let best = '';
+  list.forEach(function (a) {
+    const v = String(a || '').trim();
+    if (!v || v === key || v.length >= key.length) return;
+    if (!best || v.length < best.length) best = v;
+  });
+  return best;
+}
 function translateAlias(name) {
   const t = String(name || '').trim();
   if (!t) return t;
