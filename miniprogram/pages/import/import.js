@@ -280,6 +280,15 @@ Page({
     // 用户选择这一行 = 持久绑定真实姓名；下次导入才能自动匹配
     const realName = String(row.realName || row.nickname || row.name || '').trim();
     const target = (this.data.memberDirectory || []).filter(function (m) { return m.name === targetName; })[0];
+    const boundRealName = String(this.data.targetRealName || (target && target.realName) || '').trim();
+    if (boundRealName && realName && boundRealName !== realName) {
+      wx.showModal({
+        title: '不能改绑',
+        content: '成员「' + targetName + '」已绑定真实姓名「' + boundRealName + '」，不能再映射到「' + realName + '」。如需改绑，请管理员在成员管理中修改真实姓名。',
+        showCancel: false
+      });
+      return;
+    }
     if (!realName) {
       wx.showModal({ title: '绑定失败', content: '无法确定这一行的真实姓名，请重新选择。', showCancel: false });
       return;
@@ -494,6 +503,16 @@ Page({
                 }
                 if (hits.length) {
                   this._useMatchedRows(hits, wanted, tm, fullPreview);
+                  return;
+                }
+                // 已绑定真实姓名的成员不允许再映射到其他人；改绑必须走成员管理
+                if (targetRealName) {
+                  this.setData({ preview: null, fullPreview: null, showMemberSelect: false, recognizedMembers: [], previewNote: '', targetName: '' });
+                  wx.showModal({
+                    title: '成员已绑定',
+                    content: '成员「' + wanted + '」已绑定真实姓名「' + targetRealName + '」，当前排班表里没有这个人。不能改绑到其他人；如需改绑，请管理员在成员管理中修改真实姓名。',
+                    showCancel: false
+                  });
                   return;
                 }
                 // 需求 2.4：没有命中时列出表内所有人员，让当前成员选择
