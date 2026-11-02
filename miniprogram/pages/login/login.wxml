@@ -53,6 +53,8 @@
     <!-- 导入排班信息（仅未绑定时可用） -->
     <view class="bind-section" wx:if="{{!myBoundName}}">
       <view class="bind-import-toggle" bindtap="onImportShift">导入排班信息</view>
+      <view class="import-timer" wx:if="{{importLoading}}">识别中：{{importRecognizeSeconds}} 秒</view>
+      <view class="import-timer last" wx:if="{{!importLoading && importLastSeconds}}">上次识别：{{importLastSeconds}} 秒 · {{importLastStatus}}</view>
     </view>
 
     <!-- 已绑定提示 -->

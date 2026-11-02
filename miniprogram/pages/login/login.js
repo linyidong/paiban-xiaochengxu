@@ -2,6 +2,7 @@
 const app = getApp();
 const { getDisplayName } = require('../../utils/shift.js');
 const { selectableMembers } = require('../../utils/member.js');
+const { ensurePrivacy } = require('../../utils/privacy.js');
 Page({
   data: {
     loading: false,
@@ -23,7 +24,10 @@ Page({
     importFullPreview: null,
     showMemberSelect: false,
     recognizedMembers: [],
-    importBindName: ''
+    importBindName: '',
+    importRecognizeSeconds: 0,
+    importLastSeconds: 0,
+    importLastStatus: ''
   },
   onShow() {
     const session = wx.getStorageSync('session');
@@ -242,21 +246,46 @@ Page({
     wx.switchTab({ url: '/pages/calendar/calendar' });
   },
   // ===== 导入排班功能 =====
+  _startImportTimer() {
+    this._importStart = Date.now();
+    this._importOutcome = '';
+    this._importTimer = setInterval(() => {
+      if (!this._importStart) return;
+      const sec = Math.max(0, Math.floor((Date.now() - this._importStart) / 1000));
+      this.setData({ importRecognizeSeconds: sec });
+      try { wx.showLoading({ title: '识别中... ' + sec + 's', mask: true }); } catch (e) {}
+    }, 1000);
+  },
+  _stopImportTimer(status) {
+    if (!this._importStart && !this._importTimer) return;
+    if (this._importTimer) { clearInterval(this._importTimer); this._importTimer = null; }
+    const sec = this._importStart ? Math.max(1, Math.round((Date.now() - this._importStart) / 1000)) : 0;
+    this._importStart = 0;
+    wx.hideLoading();
+    this.setData({ importLoading: false, importRecognizeSeconds: sec, importLastSeconds: sec, importLastStatus: status || '结束' });
+  },
   onImportShift() {
     if (this.data.myBoundName) {
       const dn = getDisplayName(this.data.myBoundName);
       wx.showModal({ title: '提示', content: '您已绑定成员：' + dn + '，请直接进入日历查看排班', showCancel: false });
       return;
     }
-    if (this.data.importLoading) return;
-    wx.showActionSheet({
-      itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择', 'Excel 表格（.xlsx/.xls）'],
-      success: (res) => {
-        if (res.tapIndex === 0) this.importFromAlbum();
-        else if (res.tapIndex === 1) this.importFromChatImage();
-        else if (res.tapIndex === 2) this.importFromChat();
-        else this.importFromExcel();
-      }
+    if (this.data.importLoading) {
+      wx.showToast({ title: '正在识别，请稍候', icon: 'none' });
+      return;
+    }
+    ensurePrivacy(() => {
+      wx.showActionSheet({
+        itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择', 'Excel 表格（.xlsx/.xls）'],
+        success: (res) => {
+          if (res.tapIndex === 0) this.importFromAlbum();
+          else if (res.tapIndex === 1) this.importFromChatImage();
+          else if (res.tapIndex === 2) this.importFromChat();
+          else this.importFromExcel();
+        }
+      });
+    }, () => {
+      wx.showToast({ title: '需要同意隐私保护指引后才能导入', icon: 'none' });
     });
   },
   importFromAlbum() {
@@ -316,6 +345,8 @@ Page({
   },
   importUploadAndRecognize(filePath, type) {
     this.setData({ importLoading: true });
+    this._startImportTimer();
+    wx.showLoading({ title: '识别中... 0s', mask: true });
     let ext = '.jpg';
     if (type === 'image') {
       const m = filePath.match(/\.([a-zA-Z0-9]+)$/);
@@ -336,6 +367,11 @@ Page({
           data: { fileID: up.fileID, sourceType: type, targetName: '' },
           success: (res) => {
             const r = res.result || {};
+            const outcome = (r.ok && r.preview && r.preview.length)
+              ? ('成功，' + r.preview.length + ' 人')
+              : ('失败：' + (r.msg || '未识别到内容'));
+            this._importOutcome = outcome;
+            this._stopImportTimer(outcome);
             if (r.ok && r.preview && r.preview.length) {
               const fullPreview = r.preview.map(function (p) {
                 p.displayName = getDisplayName(p.name);
@@ -361,17 +397,20 @@ Page({
               wx.showModal({ title: '未识别到内容', content: r.msg || '请检查图片/表格格式', showCancel: false });
             }
           },
-          fail: (err) => wx.showModal({
-            title: '识别失败',
-            content: (err && err.errMsg) ? err.errMsg : '云函数调用失败，请检查网络或稍后重试',
-            showCancel: false
-          }),
-          complete: () => this.setData({ importLoading: false })
+          fail: (err) => {
+            this._stopImportTimer('请求失败');
+            wx.showModal({
+              title: '识别失败',
+              content: (err && err.errMsg) ? err.errMsg : '云函数调用失败，请检查网络或稍后重试',
+              showCancel: false
+            });
+          },
+          complete: () => this._stopImportTimer(this._importOutcome || '结束')
         });
       },
       fail: () => {
+        this._stopImportTimer('上传失败');
         wx.showToast({ title: '上传失败', icon: 'none' });
-        this.setData({ importLoading: false });
       }
     });
   },

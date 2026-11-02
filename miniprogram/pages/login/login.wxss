@@ -84,6 +84,11 @@
   padding: 20rpx 0; border-top: 2rpx solid var(--color-border);
   min-height: 88rpx; box-sizing: border-box;
 }
+.import-timer {
+  text-align: center; font-size: 26rpx; color: var(--color-text-secondary);
+  padding: 4rpx 0 16rpx;
+}
+.import-timer.last { color: var(--color-text-muted); }
 .bind-bound-hint {
   text-align: center; color: var(--color-text-muted); font-size: 28rpx;
   padding: 20rpx 0; border-top: 2rpx solid var(--color-border);

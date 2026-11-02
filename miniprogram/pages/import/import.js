@@ -1,6 +1,7 @@
 // 排班导入页：上传截图/表格 → 识别 → 单人自动导入 / 多人询问选谁 → 预览校对 → 确认入库
 const { getDisplayName } = require('../../utils/shift.js');
 const { normalizePreviewToMonth } = require('../../utils/month.js');
+const { ensurePrivacy } = require('../../utils/privacy.js');
 
 function memberLabel(p) {
   const nick = String(p.nickname || '').trim();
@@ -156,15 +157,19 @@ Page({
       wx.showToast({ title: '正在识别，请稍候', icon: 'none' });
       return;
     }
-    wx.showActionSheet({
-      itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择', 'Excel 表格（.xlsx/.xls）'],
-      success: (res) => {
-        if (res.tapIndex === 0) this.chooseFromAlbum();
-        else if (res.tapIndex === 1) this.chooseFromChatImage();
-        else if (res.tapIndex === 2) this.chooseFromChat();
-        else this.chooseFromExcel();
-      },
-      fail: () => this.chooseFromAlbum()
+    ensurePrivacy(() => {
+      wx.showActionSheet({
+        itemList: ['从相册选择', '从聊天图片选择', '从聊天文件选择', 'Excel 表格（.xlsx/.xls）'],
+        success: (res) => {
+          if (res.tapIndex === 0) this.chooseFromAlbum();
+          else if (res.tapIndex === 1) this.chooseFromChatImage();
+          else if (res.tapIndex === 2) this.chooseFromChat();
+          else this.chooseFromExcel();
+        },
+        fail: () => this.chooseFromAlbum()
+      });
+    }, () => {
+      wx.showToast({ title: '需要同意隐私保护指引后才能导入', icon: 'none' });
     });
   },
   chooseFromAlbum() {
