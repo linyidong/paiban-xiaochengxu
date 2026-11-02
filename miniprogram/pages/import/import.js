@@ -393,8 +393,10 @@ Page({
         const data = {
           fileID: up.fileID,
           sourceType: type,
-          // 每次导入都当全新文件：始终识别整表，不在服务端按当前成员过滤
-          targetName: ''
+          // 每次导入都当全新文件：服务端先识别整表，再按当前成员名过滤
+          targetName: this.data.isAdmin
+            ? (this.data.prefillName || '')
+            : (this.data.boundMemberName || '')
         };
         // 目标月份也传给识别阶段：让 AI 直接按该月天数输出，避免识别成别的年月
         const tm = this.data.targetMonth || '';
