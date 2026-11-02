@@ -463,11 +463,22 @@ Page({
           data: data,
           success: (res) => {
             const r = res.result || {};
-            const outcome = (r.ok && r.preview && r.preview.length)
-              ? ('成功，' + r.preview.length + ' 人')
-              : ('失败：' + (r.msg || '未识别到内容'));
+            const outcome = r.boundMissing
+              ? ('已绑定「' + (r.targetRealName || '') + '」，表中无此人')
+              : ((r.ok && r.preview && r.preview.length)
+                ? ('成功，' + r.preview.length + ' 人')
+                : ('失败：' + (r.msg || '未识别到内容')));
             this._recognizeOutcome = outcome;
             this._stopRecognizeTimer(outcome);
+            if (r.boundMissing) {
+              this.setData({ preview: null, fullPreview: null, showMemberSelect: false, recognizedMembers: [], previewNote: '', targetName: '', targetRealName: r.targetRealName || '' });
+              wx.showModal({
+                title: '成员已绑定',
+                content: '当前成员已绑定真实姓名「' + (r.targetRealName || '') + '」，这张表里没有这个人。不能改绑到其他人；如需改绑，请管理员在成员管理中修改真实姓名。',
+                showCancel: false
+              });
+              return;
+            }
             if (r.ok && r.preview && r.preview.length) {
               // 为每个成员添加 displayName
               const fullPreview = r.preview.map(function (p) {

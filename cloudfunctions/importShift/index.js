@@ -80,21 +80,9 @@ exports.main = async (event) => {
       else { merged[p.name] = { name: p.name, month: p.month, rows: p.rows }; }
     });
     preview = Object.keys(merged).map(function (k) { return merged[k]; });
-    // 按导入对象过滤：输入姓名 → 只取该成员的排班；填"全部"/留空 → 整表
+    // 先取目标/当前成员真实姓名，再做“整表识别 → 只保留绑定人员”的服务端拦截
     let targetMissing = false;
-    if (targetName && targetName.trim() !== '全部') {
-      const t = translateAlias(targetName.trim());
-      const filtered = preview.filter(function (p) { return p.name === t || p.name.indexOf(t) > -1 || t.indexOf(p.name) > -1; });
-      if (filtered.length) {
-        preview = filtered;
-      } else {
-        // 目标昵称与表里的真实姓名可能不一致：保留整表返回，
-        // 由前端让用户确认“把识别到的某个人导入到目标成员”，不能在这里直接失败。
-        targetMissing = true;
-      }
-    }
-    if (!preview.length) return { ok: false, msg: '未识别到排班内容，请检查图片/表格格式', preview: preview };
-    // 把目标成员的真实姓名一并返回，避免客户端成员目录未刷新时无法自动匹配
+    let boundMissing = false;
     let targetRealName = '';
     if (targetName && targetName.trim() !== '全部') {
       try {
@@ -103,7 +91,6 @@ exports.main = async (event) => {
         if (active) targetRealName = active.realName || '';
       } catch (e) { /* 查询失败不阻塞识别 */ }
     }
-    // 每次导入都按整表识别；这里再返回当前登录成员的真实姓名，供客户端重新匹配
     if (!targetRealName) {
       try {
         const meRes = await db.collection('users').where({ openid: OPENID }).get();
@@ -111,8 +98,39 @@ exports.main = async (event) => {
         if (me) targetRealName = me.realName || '';
       } catch (e) { /* 查询失败不阻塞识别 */ }
     }
-    console.log('[Import] targetName=' + (targetName || '') + ' targetRealName=' + (targetRealName || '') + ' rows=' + preview.length);
-    return { ok: true, preview: preview, targetMissing: targetMissing, targetRealName: targetRealName };  }
+    // 按导入对象过滤：输入姓名 → 只取该成员的排班；填"全部"/留空 → 整表
+    if (targetName && targetName.trim() !== '全部') {
+      const t = translateAlias(targetName.trim());
+      const filtered = preview.filter(function (p) { return p.name === t || p.name.indexOf(t) > -1 || t.indexOf(p.name) > -1; });
+      if (filtered.length) {
+        preview = filtered;
+      } else {
+        targetMissing = true;
+        // 目标昵称没命中时，服务端只保留已绑定真实姓名对应的人；
+        // 如果表里没有这个人，直接标记 boundMissing，不再把整表交给客户端任选。
+        if (targetRealName) {
+          const byReal = preview.filter(function (p) {
+            const n = String(p.nickname || p.name || '').trim();
+            const r = String(p.realName || '').trim();
+            return n === targetRealName || r === targetRealName;
+          });
+          if (byReal.length) {
+            preview = byReal;
+            targetMissing = false;
+          } else {
+            boundMissing = true;
+            preview = [];
+          }
+        }
+      }
+    }
+    if (!preview.length && boundMissing) {
+      return { ok: true, preview: [], targetMissing: true, targetRealName: targetRealName, boundMissing: true };
+    }
+    if (!preview.length) return { ok: false, msg: '未识别到排班内容，请检查图片/表格格式', preview: preview };
+    console.log('[Import] targetName=' + (targetName || '') + ' targetRealName=' + (targetRealName || '') + ' rows=' + preview.length + ' boundMissing=' + boundMissing);
+    return { ok: true, preview: preview, targetMissing: targetMissing, targetRealName: targetRealName, boundMissing: boundMissing };
+  }
 
   // ---------- 第二步：确认入库（按成员 + 月份全量替换） ----------
   let preview = event.preview;
