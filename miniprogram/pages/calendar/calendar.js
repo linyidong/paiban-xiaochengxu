@@ -250,7 +250,7 @@ Page({
     }
     wx.showModal({
       title: '删除成员',
-      content: '确定删除「' + (m.displayName || m.name) + '」？成员将从列表隐藏，历史排班保留。',
+      content: '确定要删除成员「' + (m.displayName || m.name) + '」吗？',
       confirmColor: '#EF4444',
       success: (r) => {
         if (!r.confirm) return;
