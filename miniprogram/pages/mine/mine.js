@@ -18,26 +18,7 @@ Page({
     });
     if (hasBound) {
       this.loadMySummary(session.name);
-      this._maybeAskName(session);
     }
-  },
-  _maybeAskName(session) {
-    if (session.role === 'admin' || !session.name) return;
-    const displayName = getDisplayName(session.name);
-    if (displayName !== session.name) return; // 已有导入昵称，不打扰
-    const key = 'namePrompted_' + session.openid;
-    if (wx.getStorageSync(key)) return;
-    wx.showModal({
-      title: '显示名称',
-      content: '当前显示的是导入姓名「' + session.name + '」。如果这是真实姓名，是否改成昵称？',
-      confirmText: '去修改',
-      cancelText: '暂不',
-      success: (r) => {
-        wx.setStorageSync(key, true);
-        if (r.confirm) this.onStartRename();
-      },
-      fail: () => wx.setStorageSync(key, true)
-    });
   },
   loadMySummary(name) {
     const now = new Date();

@@ -2,7 +2,7 @@
   <view class="card">
     <view class="mine-name">成员昵称：{{hasBound ? displayName : '未绑定'}}</view>
     <view class="mine-name-tip" wx:if="{{hasBound && !editingName}}">
-      显示名默认取导入昵称；如果这是真实姓名，可以改成昵称
+      显示名默认取导入昵称
       <text class="mine-editbtn" bindtap="onStartRename">修改</text>
     </view>
     <view class="mine-edit" wx:if="{{editingName}}">
