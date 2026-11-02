@@ -591,12 +591,16 @@ Page({
               if (this.data.preview || this.data.showMemberSelect || this.data.showBindConfirm) return;
               const list = this._lastPreview || [];
               if (!list.length) return;
+              // 兜底列表也必须带上当前成员作为映射目标，否则点人后 targetName 会变成表里人员
+              const fallbackTarget = this.data.prefillName ||
+                (!this.data.isAdmin ? this.data.boundMemberName : '');
               this.setData({
                 fullPreview: list,
                 showMemberSelect: true,
                 recognizedMembers: list.map(function (p) {
                   return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: memberLabel(p), subLabel: memberSubLabel(p) };
                 }),
+                mappingTargetName: fallbackTarget || '',
                 previewNote: ''
               });
             }, 300);
