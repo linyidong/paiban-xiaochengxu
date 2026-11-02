@@ -478,10 +478,11 @@ Page({
     if (!bindName) { wx.showToast({ title: '请输入成员昵称', icon: 'none' }); return; }
     this.setData({ importLoading: true });
     wx.showLoading({ title: '导入中...' });
+    const selectedRealName = String((preview[0] && preview[0].realName) || '').trim();
     // 先创建/绑定成员，再导入排班
     wx.cloud.callFunction({
       name: 'manageMember',
-      data: { action: 'createAndBind', name: bindName },
+      data: { action: 'createAndBind', name: bindName, realName: selectedRealName },
       success: (bindRes) => {
         const br = bindRes.result || {};
         // alreadyBound → 使用已绑定的成员继续导入

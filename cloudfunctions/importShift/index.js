@@ -117,8 +117,8 @@ exports.main = async (event) => {
         if (me) { if (!targetUser) targetUser = me; targetRealName = me.realName || ''; }
       } catch (e) { /* 查询失败不阻塞识别 */ }
     }
-    // 排除已经被其他成员绑定的昵称/真实姓名，防止新成员抢绑他人
-    if (targetName && targetName.trim() !== '全部') {
+    // 排除已经被其他成员绑定的昵称/真实姓名，防止新成员/登录未绑定导入抢绑他人
+    if (!targetUser || targetUser.role !== 'admin') {
       preview = preview.filter(function (p) {
         const nick = cleanText(p.nickname || p.name || '');
         const real = cleanText(p.realName || '');

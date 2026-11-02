@@ -131,7 +131,12 @@ exports.main = async (event) => {
       return { ok: false, msg: '该昵称已被使用', existing: { name: dup.data[0].name, realName: dup.data[0].realName || '' } };
     }
     const addData = { name: newName, wxId: '', role: 'member', openid: OPENID, createdAt: db.serverDate() };
-    if (newRealName) addData.realName = newRealName;
+    if (newRealName) {
+      const realDup = await db.collection('users').where({ realName: newRealName }).get();
+      const realOwner = realDup.data.filter(function (u) { return !u.isDeleted && u.openid; })[0];
+      if (realOwner) return { ok: false, msg: '该真实姓名已被成员「' + realOwner.name + '」绑定' };
+      addData.realName = newRealName;
+    }
     const addRes = await db.collection('users').add({ data: addData });
     return { ok: true, openid: OPENID, name: newName, realName: newRealName, role: 'member', _id: addRes._id };
   }
@@ -167,6 +172,11 @@ exports.main = async (event) => {
     const mineRes = await db.collection('users').where({ openid: OPENID }).get();
     const me = mineRes.data.filter(function (u) { return !u.isDeleted; })[0];
     if (!me) return { ok: false, msg: '未绑定成员' };
+    const realDup = await db.collection('users').where({ realName: realName }).get();
+    const realOwner = realDup.data.filter(function (u) {
+      return !u.isDeleted && u.openid && u._id !== me._id;
+    })[0];
+    if (realOwner) return { ok: false, msg: '该真实姓名已被成员「' + realOwner.name + '」绑定' };
     await db.collection('users').doc(me._id).update({
       data: { realName: realName, updatedAt: db.serverDate() }
     });
@@ -186,6 +196,11 @@ exports.main = async (event) => {
     const isAdmin = await checkAdmin(OPENID);
     const isSelf = target.data.openid === OPENID;
     if (!isAdmin && !isSelf) return { ok: false, msg: '只能设置自己的真实姓名' };
+    const realDup = await db.collection('users').where({ realName: realName }).get();
+    const realOwner = realDup.data.filter(function (u) {
+      return !u.isDeleted && u.openid && u._id !== id;
+    })[0];
+    if (realOwner) return { ok: false, msg: '该真实姓名已被成员「' + realOwner.name + '」绑定' };
     await db.collection('users').doc(id).update({
       data: { realName: realName, updatedAt: db.serverDate() }
     });
