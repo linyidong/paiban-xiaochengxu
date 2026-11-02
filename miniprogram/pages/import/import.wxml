@@ -30,7 +30,7 @@
     </view>
 
     <view class="import-actions">
-      <button class="btn-primary import-btn" bindtap="onChooseImage" loading="{{loading && sourceType === 'image'}}">选择排班截图 / Excel</button>
+      <button class="btn-primary import-btn" bindtap="onChooseImage">选择排班截图 / Excel</button>
     </view>
   </view>
 
