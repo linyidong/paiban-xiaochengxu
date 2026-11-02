@@ -378,6 +378,7 @@ Page({
       previewNote: ''
     });
     this.setData({ loading: true, sourceType: type });
+    wx.showLoading({ title: '识别中...', mask: true });
     let ext = '.xlsx';
     if (type === 'image') {
       const m = filePath.match(/\.([a-zA-Z0-9]+)$/);
@@ -413,6 +414,7 @@ Page({
           name: 'importShift',
           data: data,
           success: (res) => {
+            wx.hideLoading();
             const r = res.result || {};
             if (r.ok && r.preview && r.preview.length) {
               // 为每个成员添加 displayName
@@ -527,15 +529,16 @@ Page({
               wx.showModal({ title: '未识别到内容', content: r.msg || '请检查图片/表格格式', showCancel: false });
             }
           },
-          fail: (err) => wx.showModal({
+          fail: (err) => { wx.hideLoading(); wx.showModal({
             title: '识别失败',
             content: (err && err.errMsg) ? err.errMsg : '云函数调用失败，请检查网络或稍后重试',
             showCancel: false
-          }),
-          complete: () => this.setData({ loading: false })
+          }); },
+          complete: () => { wx.hideLoading(); this.setData({ loading: false }); }
         });
       },
       fail: () => {
+        wx.hideLoading();
         wx.showToast({ title: '上传失败', icon: 'none' });
         this.setData({ loading: false });
       }
