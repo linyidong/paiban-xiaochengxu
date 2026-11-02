@@ -264,7 +264,7 @@ Page({
       });
       const adjusted = normalizePreviewToMonth([mapped], tm);
       const source = [row.nickname, row.realName].filter(Boolean).join(' / ') || row.name;
-      const note = '匹配到「' + source + '」，已按「' + targetName + '」导入' +
+      const note = '匹配到「' + source + '」，已按成员「' + targetName + '」身份显示导入' +
         (adjusted.dropped ? '；忽略 ' + adjusted.dropped + ' 天（该月不存在）' : '');
       self.setData({
         preview: adjusted.preview,
