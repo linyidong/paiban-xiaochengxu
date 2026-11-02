@@ -103,6 +103,14 @@ exports.main = async (event) => {
         if (active) targetRealName = active.realName || '';
       } catch (e) { /* 查询失败不阻塞识别 */ }
     }
+    // 每次导入都按整表识别；这里再返回当前登录成员的真实姓名，供客户端重新匹配
+    if (!targetRealName) {
+      try {
+        const meRes = await db.collection('users').where({ openid: OPENID }).get();
+        const me = meRes.data.filter(function (u) { return !u.isDeleted; })[0];
+        if (me) targetRealName = me.realName || '';
+      } catch (e) { /* 查询失败不阻塞识别 */ }
+    }
     console.log('[Import] targetName=' + (targetName || '') + ' targetRealName=' + (targetRealName || '') + ' rows=' + preview.length);
     return { ok: true, preview: preview, targetMissing: targetMissing, targetRealName: targetRealName };  }
 
