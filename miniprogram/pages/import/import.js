@@ -257,6 +257,7 @@ Page({
   _applyMappedRow(row, targetName, tm) {
     const self = this;
     const apply = function () {
+      self._allowRebind = false;
       const mapped = Object.assign({}, row, {
         name: targetName,
         displayName: getDisplayName(targetName)
@@ -281,7 +282,7 @@ Page({
     const realName = String(row.realName || row.nickname || row.name || '').trim();
     const target = (this.data.memberDirectory || []).filter(function (m) { return m.name === targetName; })[0];
     const boundRealName = String(this.data.targetRealName || (target && target.realName) || '').trim();
-    if (boundRealName && realName && boundRealName !== realName) {
+    if (!this._allowRebind && boundRealName && realName && boundRealName !== realName) {
       wx.showModal({
         title: '不能改绑',
         content: '成员「' + targetName + '」已绑定真实姓名「' + boundRealName + '」，不能再映射到「' + realName + '」。如需改绑，请管理员在成员管理中修改真实姓名。',
@@ -302,6 +303,7 @@ Page({
       wx.showModal({ title: '绑定失败', content: '找不到成员「' + targetName + '」，请返回成员管理后重试。', showCancel: false });
       return;
     }
+    this._allowRebind = false;
     wx.showLoading({ title: '绑定真实姓名...' });
     wx.cloud.callFunction({
       name: 'manageMember',
@@ -471,11 +473,25 @@ Page({
             this._recognizeOutcome = outcome;
             this._stopRecognizeTimer(outcome);
             if (r.boundMissing) {
-              this.setData({ preview: null, fullPreview: null, showMemberSelect: false, recognizedMembers: [], previewNote: '', targetName: '', targetRealName: r.targetRealName || '' });
-              wx.showModal({
-                title: '成员已绑定',
-                content: '当前成员已绑定真实姓名「' + (r.targetRealName || '') + '」，这张表里没有这个人。不能改绑到其他人；如需改绑，请管理员在成员管理中修改真实姓名。',
-                showCancel: false
+              const fullPreview = (r.preview || []).map(function (p) {
+                p.displayName = getDisplayName(p.name);
+                return p;
+              });
+              const target = this.data.prefillName ||
+                (!this.data.isAdmin ? this.data.boundMemberName : '');
+              this._lastPreview = fullPreview;
+              this._allowRebind = true;
+              this.setData({
+                preview: null,
+                fullPreview: fullPreview,
+                showMemberSelect: true,
+                recognizedMembers: fullPreview.map(function (p) {
+                  return { name: p.name, nickname: p.nickname || '', realName: p.realName || '', displayName: p.displayName || p.name, label: memberLabel(p), subLabel: memberSubLabel(p) };
+                }),
+                mappingTargetName: target || '',
+                targetName: '',
+                targetRealName: r.targetRealName || '',
+                previewNote: '已绑定「' + (r.targetRealName || '') + '」，表中没有这个人；请选择要绑定的新人员'
               });
               return;
             }

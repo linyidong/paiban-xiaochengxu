@@ -107,7 +107,7 @@ exports.main = async (event) => {
       } else {
         targetMissing = true;
         // 目标昵称没命中时，服务端只保留已绑定真实姓名对应的人；
-        // 如果表里没有这个人，直接标记 boundMissing，不再把整表交给客户端任选。
+        // 如果表里没有这个人，保留整表返回，交付端让用户重新选择绑定。
         if (targetRealName) {
           const byReal = preview.filter(function (p) {
             const n = String(p.nickname || p.name || '').trim();
@@ -119,13 +119,9 @@ exports.main = async (event) => {
             targetMissing = false;
           } else {
             boundMissing = true;
-            preview = [];
           }
         }
       }
-    }
-    if (!preview.length && boundMissing) {
-      return { ok: true, preview: [], targetMissing: true, targetRealName: targetRealName, boundMissing: true };
     }
     if (!preview.length) return { ok: false, msg: '未识别到排班内容，请检查图片/表格格式', preview: preview };
     console.log('[Import] targetName=' + (targetName || '') + ' targetRealName=' + (targetRealName || '') + ' rows=' + preview.length + ' boundMissing=' + boundMissing);
